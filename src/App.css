@@ -1,0 +1,94 @@
+/* Base resets */
+body, html {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  background-color: #fafafa;
+}
+
+/* Auth Gateway layout */
+.auth-container {
+  display: flex;
+  height: 100vh;
+  width: 100vw;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+}
+
+/* Dashboard Core Layout Structure */
+.dashboard-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  width: 100vw;
+  font-family: sans-serif;
+  overflow: hidden;
+}
+
+.main-header {
+  height: 60px;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  background-color: #ffffff;
+}
+
+.workspace-container {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Navigation Left Menu */
+.sidebar-navigation {
+  width: 240px;
+  border-right: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background-color: #ffffff;
+  padding: 16px 0;
+}
+
+/* Feature Workspace (Center) */
+.content-workspace {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+/* AI Assistant Bar (Right Side) */
+.ai-sidebar {
+  width: 240px;
+  border-left: 1px solid #e5e7eb;
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  background-color: #ffffff;
+}
+
+/* Blank Feature Boxes Layouts */
+.blank-card-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.blank-card-node {
+  padding: 20px;
+  background-color: #f3f4f6;
+  border-radius: 8px;
+  height: 80px;
+}
+
+.blank-dashed-canvas {
+  width: 100%;
+  height: 300px;
+  background-color: #f3f4f6;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+}
