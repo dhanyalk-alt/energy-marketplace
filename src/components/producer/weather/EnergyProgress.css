@@ -1,0 +1,53 @@
+.energy-progress-card{
+    background:#ffffff;
+    border-radius:22px;
+    padding:24px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    transition:.3s;
+}
+
+.energy-progress-card:hover{
+    transform:translateY(-5px);
+}
+
+/* Title */
+.energy-progress-card h3{
+    margin:0 0 20px;
+    text-align:center;
+    font-size:18px;
+    font-weight:600;
+    color:#000000;
+}
+
+/* Progress Bar */
+.progress-track{
+    width:100%;
+    height:10px;
+    background:#E5E7EB;
+    border-radius:999px;
+    overflow:hidden;
+    margin-bottom:20px;
+}
+
+.progress-fill{
+    height:100%;
+    border-radius:999px;
+    transition:width .6s ease;
+}
+
+/* Main Value */
+.energy-progress-card h2{
+    margin:10px 0;
+    text-align:center;
+    font-size:48px;
+    font-weight:700;
+    color:#000000;
+}
+
+/* Subtitle */
+.energy-progress-card p{
+    margin:0;
+    text-align:center;
+    font-size:18px;
+    color:#000000;
+}

@@ -1,0 +1,520 @@
+/* =========================================
+   PREMIUM WEATHER EFFECTS
+   Part 1
+========================================= */
+
+.weather-effects{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+    border-radius:24px;
+    z-index:0;
+    pointer-events:none;
+}
+
+/* ==========================
+   Dynamic Backgrounds
+========================== */
+
+/* ==========================
+   PREMIUM LIGHT BACKGROUNDS
+========================== */
+
+.sunny-bg{
+    background: linear-gradient(
+        180deg,
+        #87CEFA 0%,
+        #B8E8FF 45%,
+        #FFF7C8 100%
+    );
+}
+
+.cloudy-bg{
+    background: linear-gradient(
+        180deg,
+        #D8E3EA 0%,
+        #EEF3F7 100%
+    );
+}
+
+.rain-bg{
+    background: linear-gradient(
+        180deg,
+        #A9BEC9 0%,
+        #D7E5EC 60%,
+        #F3F8FB 100%
+    );
+}
+
+.storm-bg{
+    background: linear-gradient(
+        180deg,
+        #9AAAB4 0%,
+        #C5D2D9 60%,
+        #EEF3F6 100%
+    );
+}
+
+.snow-bg{
+    background: linear-gradient(
+        180deg,
+        #F3F7FA 0%,
+        #FFFFFF 100%
+    );
+}
+
+.night-bg{
+    background: linear-gradient(
+        180deg,
+        #2A4D74 0%,
+        #476B94 60%,
+        #6C8FB4 100%
+    );
+}
+
+/* ==========================
+   Sun
+========================== */
+
+.sun{
+
+    background:#FFD95C;
+
+    opacity:.75;
+
+    box-shadow:
+        0 0 35px rgba(255,217,92,.5),
+        0 0 80px rgba(255,217,92,.3);
+
+}
+
+@keyframes sunRotate{
+
+    from{
+        transform:rotate(0deg);
+    }
+
+    to{
+        transform:rotate(360deg);
+    }
+
+}
+
+@keyframes sunPulse{
+
+    from{
+        box-shadow:
+            0 0 40px #ffd54f,
+            0 0 80px #ffe082;
+    }
+
+    to{
+        box-shadow:
+            0 0 60px #ffd54f,
+            0 0 120px #fff176;
+    }
+
+}
+
+/* ==========================
+   Clouds
+========================== */
+.cloud{
+
+    position:absolute;
+
+    width:180px;
+    height:55px;
+
+    background:rgba(255,255,255,.35);
+
+    border-radius:80px;
+
+    filter:blur(5px);
+
+}
+
+.cloud::before{
+
+    content:"";
+
+    position:absolute;
+
+    width:90px;
+    height:90px;
+
+    background:inherit;
+
+    border-radius:50%;
+
+    left:25px;
+    top:-35px;
+
+}
+
+.cloud::after{
+
+    content:"";
+
+    position:absolute;
+
+    width:110px;
+    height:110px;
+
+    background:inherit;
+
+    border-radius:50%;
+
+    right:25px;
+    top:-50px;
+
+}
+
+.cloud1{
+
+    top:70px;
+
+    animation:cloudMove1 45s linear infinite;
+
+}
+
+.cloud2{
+
+    top:180px;
+
+    animation:cloudMove2 60s linear infinite;
+
+}
+
+.cloud3{
+
+    top:290px;
+
+    animation:cloudMove3 80s linear infinite;
+
+}
+
+@keyframes cloudMove1{
+
+    from{
+        transform:translateX(-260px);
+    }
+
+    to{
+        transform:translateX(1200px);
+    }
+
+}
+
+@keyframes cloudMove2{
+
+    from{
+        transform:translateX(-400px);
+    }
+
+    to{
+        transform:translateX(1300px);
+    }
+
+}
+
+@keyframes cloudMove3{
+
+    from{
+        transform:translateX(-500px);
+    }
+
+    to{
+        transform:translateX(1500px);
+    }
+
+}
+
+/* ==========================
+   Real Rain
+========================== */
+
+.rain-container{
+
+    position:absolute;
+    inset:0;
+
+    overflow:hidden;
+
+}
+
+.drop{
+
+    position:absolute;
+
+    top:-40px;
+
+    width:3px;
+    height:22px;
+
+    border-radius:5px;
+
+    background:linear-gradient(
+        transparent,
+        rgba(255,255,255,.95)
+    );
+
+    opacity:.9;
+
+    animation:dropFall linear infinite;
+
+}
+
+@keyframes dropFall{
+
+    from{
+
+        transform:
+            translateY(-40px)
+            translateX(0);
+
+    }
+
+    to{
+
+        transform:
+            translateY(900px)
+            translateX(-40px);
+
+    }
+
+}
+/* =========================================
+   PREMIUM WEATHER EFFECTS
+   Part 2
+========================================= */
+
+/* ==========================
+   Snow
+========================== */
+
+.snow-container{
+    position:absolute;
+    inset:0;
+    overflow:hidden;
+}
+
+.snowflake{
+    position:absolute;
+    top:-20px;
+
+    width:8px;
+    height:8px;
+
+    border-radius:50%;
+    background:white;
+
+    box-shadow:
+        0 0 8px rgba(255,255,255,.9);
+
+    animation:snowFall linear infinite;
+}
+
+@keyframes snowFall{
+
+    from{
+        transform:
+            translateY(-20px)
+            translateX(0)
+            rotate(0deg);
+    }
+
+    to{
+        transform:
+            translateY(900px)
+            translateX(80px)
+            rotate(360deg);
+    }
+
+}
+
+/* ==========================
+   Night Stars
+========================== */
+
+.star{
+
+    position:absolute;
+
+    width:3px;
+    height:3px;
+
+    border-radius:50%;
+    background:white;
+
+    box-shadow:
+        0 0 8px white;
+
+    animation:twinkle 2s ease-in-out infinite alternate;
+
+}
+
+@keyframes twinkle{
+
+    from{
+        opacity:.2;
+        transform:scale(.7);
+    }
+
+    to{
+        opacity:1;
+        transform:scale(1.6);
+    }
+
+}
+
+/* ==========================
+   Lightning
+========================== */
+
+.lightning{
+
+    position:absolute;
+    inset:0;
+
+    animation:lightningFlash 6s infinite;
+
+}
+
+@keyframes lightningFlash{
+
+    0%,96%,100%{
+        background:transparent;
+    }
+
+    97%{
+        background:rgba(255,255,255,.15);
+    }
+
+    98%{
+        background:transparent;
+    }
+
+    99%{
+        background:rgba(255,255,255,.08);
+    }
+
+}
+
+/* ==========================
+   Small Floating Fog
+========================== */
+
+.weather-effects::after{
+
+    content:"";
+
+    position:absolute;
+    left:-20%;
+    bottom:0;
+
+    width:140%;
+    height:120px;
+
+    background:
+        radial-gradient(
+            ellipse at center,
+            rgba(255,255,255,.18),
+            transparent 70%
+        );
+
+    animation:fogMove 16s ease-in-out infinite;
+
+}
+
+@keyframes fogMove{
+
+    0%{
+        transform:translateX(-5%);
+    }
+
+    50%{
+        transform:translateX(5%);
+    }
+
+    100%{
+        transform:translateX(-5%);
+    }
+
+}
+
+/* ==========================
+   Responsive
+========================== */
+
+@media (max-width:768px){
+
+    .sun{
+
+        width:90px;
+        height:90px;
+
+        right:20px;
+        top:20px;
+
+    }
+
+    .cloud{
+
+        transform:scale(.7);
+
+    }
+
+}
+.fog{
+    position:absolute;
+
+    width:180%;
+    height:140px;
+
+    left:-40%;
+
+    background:rgba(255,255,255,.28);
+
+    filter:blur(30px);
+
+    animation:fogMove 18s ease-in-out infinite;
+}
+
+.fog1{
+    top:80px;
+}
+
+.fog2{
+    top:220px;
+    animation-delay:4s;
+}
+
+.fog3{
+    top:360px;
+    animation-delay:8s;
+}
+
+@keyframes fogMove{
+
+    0%{
+        transform:translateX(-60px);
+    }
+
+    50%{
+        transform:translateX(60px);
+    }
+
+    100%{
+        transform:translateX(-60px);
+    }
+
+}
+.mist-bg{
+    background: linear-gradient(
+        180deg,
+        #E5E9EC 0%,
+        #F2F5F7 55%,
+        #FAFBFC 100%
+    );
+}

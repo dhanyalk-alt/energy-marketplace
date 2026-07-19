@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import AIAssistant from './AIAssistant';
-import Forecasting from './Forecasting';
+import Forecasting from "./weather/Forecasting";
 import Trading from './Trading';
 import Overview from './Overview';
 import RecentSales from './RecentSales';

@@ -1,0 +1,96 @@
+.energy-section{
+    margin-top:40px;
+}
+
+.energy-heading{
+    font-size:32px;
+    font-weight:700;
+    text-align:center;
+    color:#000000;
+    margin-bottom:24px;
+}
+
+.energy-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+.energy-card{
+    background:#ffffff;
+    border-radius:22px;
+    padding:24px;
+    box-shadow:0 4px 12px rgba(0,0,0,.08);
+    transition:.3s;
+}
+
+.energy-card:hover{
+    transform:translateY(-5px);
+}
+
+.energy-card h1{
+    margin:16px 0;
+    font-size:54px;
+    font-weight:700;
+    color:#000000;
+    text-align:center;
+}
+
+.energy-card h2{
+    margin-top:20px;
+    font-size:42px;
+    font-weight:700;
+    color:#000000;
+    text-align:center;
+}
+
+.energy-card h3{
+    margin:0 0 16px;
+    font-size:18px;
+    font-weight:600;
+    color:#000000;
+    text-align:center;
+}
+
+.energy-card p{
+    margin:0;
+    font-size:18px;
+    color:#000000;
+    text-align:center;
+    line-height:1.6;
+}
+
+.recommendation-card{
+    grid-column:span 2;
+}
+
+.best-source-card{
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    align-items:center;
+}
+
+@media(max-width:1100px){
+
+    .energy-grid{
+        grid-template-columns:repeat(2,1fr);
+    }
+
+    .recommendation-card{
+        grid-column:span 2;
+    }
+
+}
+
+@media(max-width:768px){
+
+    .energy-grid{
+        grid-template-columns:1fr;
+    }
+
+    .recommendation-card{
+        grid-column:span 1;
+    }
+
+}

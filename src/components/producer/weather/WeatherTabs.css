@@ -1,0 +1,47 @@
+.weather-tabs {
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  margin: 20px 0;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.tab {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  padding: 14px 0;
+
+  font-size: 17px;
+  font-weight: 500;
+
+  color: #5f6368;
+
+  position: relative;
+
+  transition: all 0.25s ease;
+}
+
+.tab:hover {
+  color: #202124;
+}
+
+.tab.active {
+  color: #202124;
+}
+
+.tab.active::after {
+  content: "";
+
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+
+  width: 100%;
+  height: 4px;
+
+  border-radius: 999px;
+
+  background: #fbbc04;
+}
