@@ -1,0 +1,56 @@
+.weather-chart {
+  width: 100%;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 24px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 10px rgba(60, 64, 67, 0.12);
+  margin-top: 20px;
+}
+
+/* Chart Title */
+
+.chart-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 18px;
+}
+
+/* Weather Icons */
+
+.weather-icons-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  padding: 0 22px;
+}
+
+.weather-icon-item {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.weather-icon-item img {
+  width: 34px;
+  height: 34px;
+}
+
+/* Recharts */
+
+.recharts-cartesian-axis-tick-value {
+  fill: #5f6368;
+  font-size: 13px;
+}
+
+.recharts-label-list text {
+  fill: #5f6368;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.recharts-tooltip-wrapper {
+  outline: none;
+}

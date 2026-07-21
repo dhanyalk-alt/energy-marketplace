@@ -1,0 +1,92 @@
+.forecast-section {
+  margin-top: 30px;
+}
+
+.forecast-title {
+  margin-bottom: 15px;
+  font-size: 22px;
+  font-weight: 600;
+  color: #202124;
+}
+
+.forecast-container {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 18px;
+
+  box-shadow: 0 2px 10px rgba(60, 64, 67, 0.12);
+
+  overflow-x: auto;
+}
+
+.forecast-item {
+  flex: 1;
+  min-width: 95px;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  padding: 14px 10px;
+  border-radius: 16px;
+
+  transition: all 0.25s ease;
+}
+
+.forecast-item:hover {
+  background: #f8f9fa;
+  transform: translateY(-3px);
+}
+
+.selected-card{
+    background:#eef5ff;
+    border:2px solid #4285F4;
+}
+.forecast-item{
+    cursor:pointer;
+}
+
+.day {
+  font-size: 15px;
+  font-weight: 600;
+  color: #202124;
+  margin-bottom: 8px;
+}
+
+.forecast-item img {
+  width: 50px;
+  height: 50px;
+  margin-bottom: 10px;
+}
+
+.temperature {
+  margin: 0;
+  font-size: 16px;
+}
+
+.max-temp {
+  font-weight: 600;
+  color: #202124;
+}
+
+.slash {
+  color: #9aa0a6;
+}
+
+.min-temp {
+  color: #757575;
+}
+
+@media (max-width: 900px) {
+  .forecast-container {
+    gap: 8px;
+  }
+
+  .forecast-item {
+    min-width: 85px;
+  }
+}

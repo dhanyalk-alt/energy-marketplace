@@ -1,0 +1,115 @@
+.current-weather {
+  position: relative;
+  overflow: hidden;
+
+  width: 100%;
+  background: #ffffff;
+  border-radius: 24px;
+  padding: 30px 36px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 10px rgba(60, 64, 67, 0.12);
+  transition: all 0.3s ease;
+}
+
+/* Keeps everything above the animation */
+.current-weather-content {
+  position: relative;
+  z-index: 2;
+}
+
+/* Location */
+
+.location-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.location-dot {
+  width: 12px;
+  height: 12px;
+  background: #4285f4;
+  border-radius: 50%;
+}
+
+.location-row h2 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+  color: #202124;
+}
+
+/* Main Layout */
+
+.weather-top {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* Left */
+
+.weather-left {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.weather-icon {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+}
+
+.temp-section {
+  display: flex;
+  align-items: flex-start;
+}
+
+.temp-section h1 {
+  margin: 0;
+  font-size: 84px;
+  font-weight: 400;
+  line-height: 1;
+  color: #202124;
+}
+
+.degree {
+  font-size: 36px;
+  margin-top: 8px;
+  color: #070707;
+}
+
+.weather-stats {
+  margin-left: 16px;
+}
+
+.weather-stats p {
+  margin: 6px 0;
+  font-size: 18px;
+  color: #030303;
+}
+
+.weather-right {
+  text-align: right;
+}
+
+.weather-right h1 {
+  margin: 0;
+  font-size: 40px;
+  font-weight: 500;
+  color: #090909;
+}
+
+.weather-right p {
+  margin: 8px 0;
+  font-size: 18px;
+  color: #020405;
+}
+
+.condition {
+  font-size: 22px;
+  font-weight: 500;
+  color: #0f0f0f;
+}
