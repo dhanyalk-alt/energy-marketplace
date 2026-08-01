@@ -1,5 +1,48 @@
 from fastapi import APIRouter, Depends, HTTPException
 from app.dependencies import get_current_user
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.schemas import TradingCreate
+from app.dependencies import get_db
+from app.crud import create_listing
+
+router=APIRouter(
+
+    prefix="/producer",
+
+    tags=["Producer"]
+
+)
+
+@router.post("/trading")
+
+async def trading(
+
+    item:TradingCreate,
+
+    db:AsyncSession=Depends(get_db)
+
+):
+
+    listing=await create_listing(
+
+        db,
+
+        producer="producer1",
+
+        units=item.available_units,
+
+        price=item.price
+
+    )
+
+    return{
+
+        "message":"Listing Created",
+
+        "id":listing.id
+
+    }
 router = APIRouter(
     prefix="/producer",
     tags=["Producer"]

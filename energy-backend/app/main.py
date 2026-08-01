@@ -4,25 +4,21 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.database import engine, Base
 from app import models
 
-from app.routers import login, producer, consumer
+from app.routers import login, producer, consumer, trading
 
+# Create FastAPI app FIRST
 app = FastAPI(
     title="Energy Marketplace API",
     version="1.0.0"
 )
 
-# -------------------------------
-# Create Database Tables
-# -------------------------------
+# Startup
 @app.on_event("startup")
 async def startup():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-
-# -------------------------------
-# Enable CORS
-# -------------------------------
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -34,28 +30,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# -------------------------------
-# Register Routers
-# -------------------------------
+# Register routers
 app.include_router(login.router)
 app.include_router(producer.router)
 app.include_router(consumer.router)
+app.include_router(trading.router)
 
-
-# -------------------------------
-# Home Route
-# -------------------------------
+# Home
 @app.get("/")
 async def root():
-    return {
-        "message": "Energy Marketplace Backend Running Successfully"
-    }
+    return {"message": "Energy Marketplace Backend Running Successfully"}
 
-
-# -------------------------------
-# Health Check
-# -------------------------------
+# Health
 @app.get("/health")
 async def health():
     return {

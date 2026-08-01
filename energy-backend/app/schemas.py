@@ -16,7 +16,6 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
-    role: Literal["producer", "consumer"]
 
 
 # ---------- User Response ----------
@@ -39,5 +38,44 @@ class Token(BaseModel):
     token_type: str
     role: str
 
+
 class TokenData(BaseModel):
     username: str | None = None
+
+
+# ---------- Trading ----------
+
+class TradingCreate(BaseModel):
+    producer: str
+    energy: float
+    price: float
+
+
+class TradingResponse(BaseModel):
+    id: int
+    producer: str
+    energy: float
+    price: float
+    status: str
+
+    class Config:
+        from_attributes = True
+
+
+# ---------- Buy Request ----------
+
+class BuyRequestCreate(BaseModel):
+    consumer: str
+    energy: float
+
+
+class BuyRequestResponse(BaseModel):
+    id: int
+    consumer: str
+    producer: str
+    energy: float
+    total_price: float
+    status: str
+
+    class Config:
+        from_attributes = True

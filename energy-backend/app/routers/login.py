@@ -11,7 +11,6 @@ router = APIRouter(
     tags=["Authentication"]
 )
 
-
 # ------------------------
 # Register
 # ------------------------
@@ -68,14 +67,7 @@ async def login(
             detail="Invalid password"
         )
 
-    # Producer must login as Producer
-    # Consumer must login as Consumer
-    if db_user.role != user.role:
-        raise HTTPException(
-            status_code=403,
-            detail=f"This account is registered as {db_user.role}"
-        )
-
+    # Create JWT token
     token = create_access_token(
         {
             "sub": db_user.username,
@@ -84,7 +76,7 @@ async def login(
     )
 
     return {
-    "access_token": token,
-    "token_type": "bearer",
-    "role": user.role
-}
+        "access_token": token,
+        "token_type": "bearer",
+        "role": db_user.role
+    }
