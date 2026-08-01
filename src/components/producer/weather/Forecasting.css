@@ -1,0 +1,39 @@
+/* Main Weather Page */
+
+.forecasting-container{
+    position: relative;   /* ADD THIS */
+    overflow: hidden;     /* ADD THIS */
+
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+    padding:24px;
+}
+.forecasting-container > *:not(.weather-effects){
+    position: relative;
+    z-index: 1;
+}
+/* Make every section take full width */
+
+.forecasting-container > * {
+  width: 100%;
+}
+
+/* Loading & Error */
+
+.forecasting-container h2 {
+  text-align: center;
+  color: #03070b;
+  margin-top: 80px;
+  font-weight: 500;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .forecasting-container {
+    padding: 16px;
+    gap: 18px;
+  }
+}

@@ -1,0 +1,66 @@
+.aq-card{
+
+    background:white;
+
+    border-radius:24px;
+
+    padding:24px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+
+    transition:.3s;
+}
+
+.aq-card:hover{
+
+    transform:translateY(-5px);
+}
+
+.aq-header{
+
+    font-size:18px;
+
+    font-weight:600;
+}
+
+.aq-status{
+
+    margin-top:18px;
+
+    font-size:30px;
+
+    font-weight:700;
+}
+
+.aq-value{
+
+    margin-top:12px;
+
+    font-size:18px;
+
+    color:#666;
+}
+
+.aq-bar{
+
+    width:100%;
+
+    height:10px;
+
+    background:#ECEFF1;
+
+    border-radius:10px;
+
+    overflow:hidden;
+
+    margin-top:22px;
+}
+
+.aq-progress{
+
+    height:100%;
+
+    border-radius:10px;
+
+    transition:.5s;
+}

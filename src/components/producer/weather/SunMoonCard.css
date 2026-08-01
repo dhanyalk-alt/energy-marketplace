@@ -1,0 +1,68 @@
+.sunmoon-card{
+
+    background:#fff;
+
+    border-radius:24px;
+
+    padding:24px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+
+    transition:.25s;
+}
+
+.sunmoon-card:hover{
+
+    transform:translateY(-5px);
+}
+
+.sunmoon-title{
+
+    margin:0;
+
+    font-size:20px;
+
+    font-weight:600;
+
+    color:#202124;
+}
+
+.sunmoon-row{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    margin-top:18px;
+
+    font-size:16px;
+
+    color:#5f6368;
+}
+
+.sunmoon-row strong{
+
+    color:#202124;
+
+    font-weight:600;
+}
+
+.sunmoon-card hr{
+
+    margin:20px 0;
+
+    border:none;
+
+    border-top:1px solid #e0e0e0;
+}
+
+.moon-phase{
+
+    text-align:center;
+
+    font-size:18px;
+
+    font-weight:600;
+
+    color:#202124;
+}
