@@ -1,0 +1,111 @@
+.trading-container{
+
+    padding:40px;
+
+}
+
+.listing-card{
+
+    width:400px;
+
+    display:flex;
+
+    flex-direction:column;
+
+    gap:15px;
+
+    padding:20px;
+
+    background:white;
+
+    border-radius:10px;
+
+    box-shadow:0 0 8px rgba(0,0,0,.15);
+
+}
+
+.listing-card input{
+
+    padding:10px;
+
+    font-size:16px;
+
+}
+
+.listing-card button{
+
+    padding:12px;
+
+    background:#0066ff;
+
+    color:white;
+
+    border:none;
+
+    border-radius:6px;
+
+    cursor:pointer;
+
+}
+
+.requests{
+
+    margin-top:40px;
+
+}
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+
+}
+
+th{
+
+    background:#0066ff;
+
+    color:white;
+
+}
+
+th,td{
+
+    padding:12px;
+
+    border:1px solid #ddd;
+
+    text-align:center;
+
+}
+
+.accept{
+
+    background:green;
+
+    color:white;
+
+    border:none;
+
+    padding:8px 15px;
+
+    margin-right:10px;
+
+    cursor:pointer;
+
+}
+
+.reject{
+
+    background:red;
+
+    color:white;
+
+    border:none;
+
+    padding:8px 15px;
+
+    cursor:pointer;
+
+}

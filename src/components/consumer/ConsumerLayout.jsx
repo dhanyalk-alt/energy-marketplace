@@ -9,12 +9,26 @@ import Settings from './Settings';
 
 export default function ConsumerLayout({ onLogout }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [selectedProducer, setSelectedProducer] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
   const renderContent = () => {
     switch(activeTab) {
-      case 'marketplace': return <ProducerMarketplace onRedirectToRequests={() => setActiveTab('requests')} />;
-      case 'requests': return <RequestBuying />;
+    case 'marketplace':
+  return (
+    <ProducerMarketplace
+      onRedirectToRequests={(producer) => {
+        setSelectedProducer(producer);
+        setActiveTab('requests');
+      }}
+    />
+  );
+    case 'requests':
+  return (
+    <RequestBuying
+      producer={selectedProducer}
+    />
+  );
       case 'overview': return <Overview />;
       case 'flow': return <EnergyFlowMap />;
       case 'reviews': return <ReviewProducers />;

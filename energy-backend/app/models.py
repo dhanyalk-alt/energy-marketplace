@@ -1,4 +1,12 @@
-from sqlalchemy import Column, Integer, String, Boolean, Float, DateTime, ForeignKey
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    Float,
+    DateTime,
+    ForeignKey,
+)
 from datetime import datetime
 from app.database import Base
 
@@ -25,16 +33,11 @@ class EnergyListing(Base):
     __tablename__ = "energy_listings"
 
     id = Column(Integer, primary_key=True, index=True)
-
     producer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
-    available_energy = Column(Float, nullable=False)   # kWh
+    available_energy = Column(Float, nullable=False)
     price_per_kwh = Column(Float, nullable=False)
-
-    energy_source = Column(String(50), nullable=False)  # Solar, Wind, etc.
-
+    energy_source = Column(String(50), nullable=False)
     status = Column(String(20), default="Available")
-
     created_at = Column(DateTime, default=datetime.utcnow)
 
 
@@ -45,22 +48,15 @@ class Transaction(Base):
     __tablename__ = "transactions"
 
     id = Column(Integer, primary_key=True, index=True)
-
     producer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
     consumer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
     energy_kwh = Column(Float, nullable=False)
-
     price_per_kwh = Column(Float, nullable=False)
-
     total_amount = Column(Float, nullable=False)
-
     status = Column(String(20), default="Completed")
-
     created_at = Column(DateTime, default=datetime.utcnow)
-    
-    listing_id = Column(Integer,ForeignKey("energy_listings.id"),nullable=False)
+    listing_id = Column(Integer, ForeignKey("energy_listings.id"), nullable=False)
+
 
 # -------------------------------
 # Review
@@ -69,15 +65,37 @@ class Review(Base):
     __tablename__ = "reviews"
 
     id = Column(Integer, primary_key=True, index=True)
-
     transaction_id = Column(Integer, ForeignKey("transactions.id"), nullable=False)
-
     producer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
     consumer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
-
     rating = Column(Integer, nullable=False)
-
     comment = Column(String(500), nullable=False)
-
     created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# -------------------------------
+# Trading
+# -------------------------------
+class Trading(Base):
+    __tablename__ = "trading"
+
+    id = Column(Integer, primary_key=True, index=True)
+    producer = Column(String, nullable=False)
+    energy = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    status = Column(String, default="Available")
+
+
+# -------------------------------
+# Buy Request
+# -------------------------------
+class BuyRequest(Base):
+    __tablename__ = "buy_requests"
+
+    id = Column(Integer, primary_key=True, index=True)
+    consumer = Column(String)
+    producer = Column(String)
+    listing_id = Column(Integer, ForeignKey("trading.id"))
+    energy = Column(Float)
+    total_price = Column(Float)
+    status = Column(String, default="Pending")

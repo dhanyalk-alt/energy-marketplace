@@ -27,19 +27,19 @@ export default function AuthGateway({ onLoginSuccess }) {
         ? '/auth/register'
         : '/auth/login';
 
-    const payload =
-      activeTab === 'register'
-        ? {
-            username,
-            phone_number: phoneNumber,
-            password,
-            role,
-          }
-        : {
-            username,
-            password,
-            role,
-          };
+   const payload =
+  activeTab === "register"
+    ? {
+        username,
+        phone_number: phoneNumber,
+        password,
+        role,
+      }
+    : {
+        username,
+        password,
+      };
+          console.log("Payload:", payload);
 
     try {
       const response = await fetch(
@@ -54,6 +54,7 @@ export default function AuthGateway({ onLoginSuccess }) {
       );
 
       const data = await response.json();
+      console.log("Backend Response:", data);
 
       if (!response.ok) {
         throw new Error(
@@ -109,6 +110,22 @@ if (activeTab === 'register') {
                   : {}),
               }}
             >
+              <div style={{ marginBottom: "15px" }}>
+    <label>Login As</label>
+
+    <select
+        value={role}
+        onChange={(e) => setRole(e.target.value)}
+        style={{
+            width: "100%",
+            padding: "10px",
+            marginTop: "5px"
+        }}
+    >
+        <option value="producer">Producer</option>
+        <option value="consumer">Consumer</option>
+    </select>
+</div>
               Sign In
             </button>
 
