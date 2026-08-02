@@ -78,6 +78,7 @@ async def login(
 
     token = create_access_token(
         {
+            "id": db_user.id,
             "sub": db_user.username,
             "role": db_user.role
         }

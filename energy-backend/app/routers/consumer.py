@@ -12,7 +12,7 @@ async def consumer_dashboard(
     user=Depends(get_current_user)
 ):
     return {
-        "message": f"Welcome {user['name']} to Consumer Dashboard"
+        "message": f"Welcome {user['sub']} to Consumer Dashboard"
     }
 
 

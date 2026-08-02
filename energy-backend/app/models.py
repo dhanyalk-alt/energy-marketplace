@@ -7,11 +7,8 @@ class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, index=True)
-
     username = Column(String(100), unique=True, nullable=False)
-
     phone_number = Column(String(20), unique=True, nullable=False)
-
     password_hash = Column(String(255), nullable=False)
 
     # producer or consumer
@@ -21,6 +18,29 @@ class User(Base):
     is_active = Column(Boolean, default=True)
 
 
+# -------------------------------
+# Energy Listing
+# -------------------------------
+class EnergyListing(Base):
+    __tablename__ = "energy_listings"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    producer_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+
+    available_energy = Column(Float, nullable=False)   # kWh
+    price_per_kwh = Column(Float, nullable=False)
+
+    energy_source = Column(String(50), nullable=False)  # Solar, Wind, etc.
+
+    status = Column(String(20), default="Available")
+
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+# -------------------------------
+# Transaction
+# -------------------------------
 class Transaction(Base):
     __tablename__ = "transactions"
 
@@ -39,8 +59,12 @@ class Transaction(Base):
     status = Column(String(20), default="Completed")
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    listing_id = Column(Integer,ForeignKey("energy_listings.id"),nullable=False)
 
-
+# -------------------------------
+# Review
+# -------------------------------
 class Review(Base):
     __tablename__ = "reviews"
 
@@ -54,6 +78,6 @@ class Review(Base):
 
     rating = Column(Integer, nullable=False)
 
-    comment = Column(String(500))
+    comment = Column(String(500), nullable=False)
 
     created_at = Column(DateTime, default=datetime.utcnow)

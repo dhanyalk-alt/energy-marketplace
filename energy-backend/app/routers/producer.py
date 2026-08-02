@@ -16,7 +16,7 @@ async def producer_dashboard(
             detail="Only producers can access this page"
         )
     return {
-        "message": f"Welcome {user['name']} to Producer Dashboard"
+        "message": f"Welcome {user['sub']} to Producer Dashboard"
     }
 
 
