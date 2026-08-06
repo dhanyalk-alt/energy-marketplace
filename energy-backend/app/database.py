@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = "postgresql+asyncpg://postgres:12345@localhost:5436/energy_marketplace"
+DATABASE_URL = "postgresql+asyncpg://postgres:123456789@localhost:5432/energyLogin_db"
 
 # Create Engine
 engine = create_async_engine(

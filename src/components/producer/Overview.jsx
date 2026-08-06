@@ -11,7 +11,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// ---- Design tokens (shared with Consumer Overview) ------------------
+// -------------------------------------------------------------
+// Design tokens
+// -------------------------------------------------------------
 const colors = {
   bg: "#0B1420",
   surface: "#131F30",
@@ -23,46 +25,63 @@ const colors = {
   cyan: "#3FD0E0",
   green: "#5FD98A",
   orange: "#FF8A65",
+  red: "#FF6B6B",
   violet: "#B98CF2",
 };
 
+// -------------------------------------------------------------
+// Fonts + responsive layout
+// -------------------------------------------------------------
 const fontImport = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(63,208,224,0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(63,208,224,0); }
-  100% { box-shadow: 0 0 0 0 rgba(63,208,224,0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(63,208,224,0.55);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(63,208,224,0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(63,208,224,0);
+  }
 }
 
-.pv-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-.pv-split { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-top: 22px; }
-.pv-table th, .pv-table td { padding: 12px 14px; text-align: center; }
-.pv-table tbody tr:hover { background: rgba(255,255,255,0.03); }
-.pv-table thead th {
-  background: #182742 !important;
-  color: #9FB0C9 !important;
-  font-weight: 700 !important;
-  font-size: 11px !important;
-  text-transform: uppercase !important;
-  letter-spacing: 0.08em !important;
-  text-align: center !important;
-  border: none !important;
-  border-bottom: 2px solid #3FD0E0 !important;
-  padding: 12px 14px !important;
+.pv-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
 }
-.pv-table thead th:first-child { border-top-left-radius: 8px; }
-.pv-table thead th:last-child { border-top-right-radius: 8px; }
+
+.pv-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  margin-top: 22px;
+}
 
 @media (max-width: 900px) {
-  .pv-grid { grid-template-columns: repeat(2, 1fr); }
-  .pv-split { grid-template-columns: 1fr; }
+  .pv-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pv-split {
+    grid-template-columns: 1fr;
+  }
 }
+
 @media (max-width: 520px) {
-  .pv-grid { grid-template-columns: 1fr; }
+  .pv-grid {
+    grid-template-columns: 1fr;
+  }
 }
 `;
 
+// -------------------------------------------------------------
+// Stat Card
+// -------------------------------------------------------------
 function StatCard({ label, value, unit, accent, icon }) {
   return (
     <div
@@ -88,8 +107,12 @@ function StatCard({ label, value, unit, accent, icon }) {
         }}
       >
         <span>{label}</span>
-        <span style={{ fontSize: 18 }}>{icon}</span>
+
+        <span style={{ fontSize: 18 }}>
+          {icon}
+        </span>
       </div>
+
       <div
         style={{
           fontFamily: "Space Grotesk, sans-serif",
@@ -101,14 +124,25 @@ function StatCard({ label, value, unit, accent, icon }) {
       >
         {value}
       </div>
-      <p style={{ color: colors.textMuted, fontSize: 13, marginTop: 8 }}>
+
+      <p
+        style={{
+          color: colors.textMuted,
+          fontSize: 13,
+          marginTop: 8,
+          marginBottom: 0,
+        }}
+      >
         {unit}
       </p>
     </div>
   );
 }
 
-function Panel({ children, style }) {
+// -------------------------------------------------------------
+// Panel
+// -------------------------------------------------------------
+function Panel({ children, style = {} }) {
   return (
     <div
       style={{
@@ -124,22 +158,34 @@ function Panel({ children, style }) {
   );
 }
 
-const statusColor = (status) =>
-  status === "Accepted"
-    ? colors.green
-    : status === "Rejected"
-    ? "#FF6B6B"
-    : colors.orange;
-
+// -------------------------------------------------------------
+// Producer Overview
+// -------------------------------------------------------------
 export default function ProducerOverview() {
+  // -----------------------------------------------------------
+  // Dashboard statistics
+  // -----------------------------------------------------------
   const [stats, setStats] = useState({
     availableEnergy: 0,
     earnings: 0,
     energySold: 0,
     pendingRequests: 0,
   });
-  const [recentTransactions, setRecentTransactions] = useState([]);
 
+  // -----------------------------------------------------------
+  // Real battery data
+  // -----------------------------------------------------------
+  const [battery, setBattery] = useState(null);
+
+  // -----------------------------------------------------------
+  // Loading / error states
+  // -----------------------------------------------------------
+  const [batteryLoading, setBatteryLoading] = useState(true);
+  const [batteryError, setBatteryError] = useState("");
+
+  // -----------------------------------------------------------
+  // Revenue chart
+  // -----------------------------------------------------------
   const revenueData = [
     { day: "Mon", revenue: 2200 },
     { day: "Tue", revenue: 3100 },
@@ -150,10 +196,17 @@ export default function ProducerOverview() {
     { day: "Sun", revenue: stats.earnings },
   ];
 
+  // -----------------------------------------------------------
+  // Load dashboard when page opens
+  // -----------------------------------------------------------
   useEffect(() => {
     loadDashboard();
+    loadBattery();
   }, []);
 
+  // -----------------------------------------------------------
+  // Load trading dashboard data
+  // -----------------------------------------------------------
   const loadDashboard = async () => {
     try {
       const username = localStorage.getItem("username");
@@ -166,31 +219,67 @@ export default function ProducerOverview() {
         "http://127.0.0.1:8000/trading/requests"
       );
 
-      const myListings = tradingResponse.data.filter(
+      const tradingData = Array.isArray(tradingResponse.data)
+        ? tradingResponse.data
+        : [];
+
+      const requestData = Array.isArray(requestResponse.data)
+        ? requestResponse.data
+        : [];
+
+      // -------------------------------------------------------
+      // Producer's listings
+      // -------------------------------------------------------
+      const myListings = tradingData.filter(
         (item) => item.producer === username
       );
 
-      const myRequests = requestResponse.data.filter(
+      // -------------------------------------------------------
+      // Producer's buy requests
+      // -------------------------------------------------------
+      const myRequests = requestData.filter(
         (item) => item.producer === username
       );
 
-      setRecentTransactions(
-        myRequests.sort((a, b) => b.id - a.id).slice(0, 5)
+      // -------------------------------------------------------
+      // Available energy
+      // -------------------------------------------------------
+      const availableEnergy = myListings
+        .filter((item) => item.status === "Available")
+        .reduce(
+          (sum, item) => sum + Number(item.energy || 0),
+          0
+        );
+
+      // -------------------------------------------------------
+      // Accepted transactions
+      // -------------------------------------------------------
+      const accepted = myRequests.filter(
+        (item) => item.status === "Accepted"
       );
 
-      const availableEnergy = myListings.reduce(
-        (sum, item) => sum + item.energy,
-        0
+      // -------------------------------------------------------
+      // Pending requests
+      // -------------------------------------------------------
+      const pending = myRequests.filter(
+        (item) => item.status === "Pending"
       );
 
-      const accepted = myRequests.filter((item) => item.status === "Accepted");
-      const pending = myRequests.filter((item) => item.status === "Pending");
-
+      // -------------------------------------------------------
+      // Earnings
+      // -------------------------------------------------------
       const earnings = accepted.reduce(
-        (sum, item) => sum + item.total_price,
+        (sum, item) => sum + Number(item.total_price || 0),
         0
       );
-      const sold = accepted.reduce((sum, item) => sum + item.energy, 0);
+
+      // -------------------------------------------------------
+      // Energy sold
+      // -------------------------------------------------------
+      const sold = accepted.reduce(
+        (sum, item) => sum + Number(item.energy || 0),
+        0
+      );
 
       setStats({
         availableEnergy,
@@ -199,22 +288,90 @@ export default function ProducerOverview() {
         pendingRequests: pending.length,
       });
     } catch (err) {
-      console.log(err);
+      console.error("Failed to load producer dashboard:", err);
     }
   };
 
+  // -------------------------------------------------------------
+  // Load real battery dataset API
+  // -------------------------------------------------------------
+  const loadBattery = async () => {
+    try {
+      setBatteryLoading(true);
+      setBatteryError("");
+
+      const response = await axios.get(
+        "http://127.0.0.1:8000/battery/status"
+      );
+
+      setBattery(response.data);
+    } catch (err) {
+      console.error("Failed to load battery data:", err);
+
+      setBatteryError(
+        "Unable to load battery data"
+      );
+    } finally {
+      setBatteryLoading(false);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // Battery values
+  // -------------------------------------------------------------
+  const batterySoc = Number(battery?.soc ?? 0);
+
+  const batteryState = battery?.state ?? "Unavailable";
+
+  const batteryHealth = battery?.health ?? "Unavailable";
+
+  const batteryVoltage = Number(
+    battery?.voltage ?? 0
+  );
+
+  const batteryPower = Number(
+    battery?.battery_power ?? 0
+  );
+
+  // -------------------------------------------------------------
+  // Battery color based on SOC
+  // -------------------------------------------------------------
+  const getBatteryColor = () => {
+    if (batterySoc <= 20) {
+      return colors.red;
+    }
+
+    if (batterySoc <= 40) {
+      return colors.orange;
+    }
+
+    return colors.green;
+  };
+
+  const batteryColor = getBatteryColor();
+
+  // -------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: `radial-gradient(circle at 85% 0%, #16233A 0%, ${colors.bg} 55%)`,
+        background: `radial-gradient(
+          circle at 85% 0%,
+          #16233A 0%,
+          ${colors.bg} 55%
+        )`,
         padding: "32px 28px 60px",
         fontFamily: "Inter, sans-serif",
       }}
     >
       <style>{fontImport}</style>
 
-      {/* Header */}
+      {/* ===================================================== */}
+      {/* HEADER */}
+      {/* ===================================================== */}
+
       <div
         style={{
           display: "flex",
@@ -238,6 +395,7 @@ export default function ProducerOverview() {
           >
             Producer · Live Grid
           </div>
+
           <h1
             style={{
               fontFamily: "Space Grotesk, sans-serif",
@@ -249,14 +407,25 @@ export default function ProducerOverview() {
           >
             Overview
           </h1>
-          <p style={{ color: colors.textMuted, marginTop: 6, fontSize: 14 }}>
+
+          <p
+            style={{
+              color: colors.textMuted,
+              marginTop: 6,
+              fontSize: 14,
+            }}
+          >
             Monitor your energy production and trading activity.
           </p>
         </div>
 
         <div
           style={{
-            background: `linear-gradient(135deg, ${colors.amber}, #D9860F)`,
+            background: `linear-gradient(
+              135deg,
+              ${colors.amber},
+              #D9860F
+            )`,
             color: "#1A1305",
             padding: "13px 22px",
             borderRadius: 12,
@@ -270,8 +439,12 @@ export default function ProducerOverview() {
         </div>
       </div>
 
-      {/* Stat cards */}
+      {/* ===================================================== */}
+      {/* STAT CARDS */}
+      {/* ===================================================== */}
+
       <div className="pv-grid">
+
         <StatCard
           label="Available Energy"
           value={stats.availableEnergy}
@@ -279,6 +452,7 @@ export default function ProducerOverview() {
           accent={colors.amber}
           icon="⚡"
         />
+
         <StatCard
           label="Revenue"
           value={`₹${stats.earnings.toLocaleString()}`}
@@ -286,6 +460,7 @@ export default function ProducerOverview() {
           accent={colors.green}
           icon="💰"
         />
+
         <StatCard
           label="Energy Sold"
           value={stats.energySold}
@@ -293,6 +468,7 @@ export default function ProducerOverview() {
           accent={colors.cyan}
           icon="📦"
         />
+
         <StatCard
           label="Pending Requests"
           value={stats.pendingRequests}
@@ -300,11 +476,21 @@ export default function ProducerOverview() {
           accent={colors.orange}
           icon="⏳"
         />
+
       </div>
 
-      {/* Chart + side panels */}
+      {/* ===================================================== */}
+      {/* REVENUE + BATTERY */}
+      {/* ===================================================== */}
+
       <div className="pv-split">
+
+        {/* =================================================== */}
+        {/* REVENUE ANALYTICS */}
+        {/* =================================================== */}
+
         <Panel style={{ minHeight: 420 }}>
+
           <h2
             style={{
               fontFamily: "Space Grotesk, sans-serif",
@@ -317,22 +503,38 @@ export default function ProducerOverview() {
             Revenue Analytics
           </h2>
 
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer
+            width="100%"
+            height={320}
+          >
             <LineChart data={revenueData}>
-              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+
+              <CartesianGrid
+                stroke="rgba(255,255,255,0.06)"
+                vertical={false}
+              />
+
               <XAxis
                 dataKey="day"
                 stroke={colors.textMuted}
-                tick={{ fill: colors.textMuted, fontSize: 12 }}
+                tick={{
+                  fill: colors.textMuted,
+                  fontSize: 12,
+                }}
                 axisLine={false}
                 tickLine={false}
               />
+
               <YAxis
                 stroke={colors.textMuted}
-                tick={{ fill: colors.textMuted, fontSize: 12 }}
+                tick={{
+                  fill: colors.textMuted,
+                  fontSize: 12,
+                }}
                 axisLine={false}
                 tickLine={false}
               />
+
               <Tooltip
                 contentStyle={{
                   background: colors.surfaceAlt,
@@ -340,34 +542,92 @@ export default function ProducerOverview() {
                   borderRadius: 8,
                   color: colors.text,
                 }}
-                labelStyle={{ color: colors.textMuted }}
+                labelStyle={{
+                  color: colors.textMuted,
+                }}
               />
+
               <Line
                 type="monotone"
                 dataKey="revenue"
                 stroke={colors.green}
                 strokeWidth={3}
-                dot={{ r: 3, fill: colors.green, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
+                dot={{
+                  r: 3,
+                  fill: colors.green,
+                  strokeWidth: 0,
+                }}
+                activeDot={{
+                  r: 5,
+                }}
               />
+
             </LineChart>
           </ResponsiveContainer>
+
         </Panel>
 
-        <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
-          {/* Battery status */}
-          <Panel style={{ height: 200, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <h3
+        {/* =================================================== */}
+        {/* RIGHT SIDE */}
+        {/* =================================================== */}
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 18,
+          }}
+        >
+
+          {/* =============================================== */}
+          {/* REAL BATTERY STATUS */}
+          {/* =============================================== */}
+
+          <Panel
+            style={{
+              minHeight: 200,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+
+            <div
               style={{
-                margin: 0,
-                fontFamily: "Space Grotesk, sans-serif",
-                fontSize: 15,
-                fontWeight: 600,
-                color: colors.text,
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
               }}
             >
-              🔋 Battery Status
-            </h3>
+
+              <h3
+                style={{
+                  margin: 0,
+                  fontFamily: "Space Grotesk, sans-serif",
+                  fontSize: 15,
+                  fontWeight: 600,
+                  color: colors.text,
+                }}
+              >
+                🔋 Battery Status
+              </h3>
+
+              <span
+                style={{
+                  width: 8,
+                  height: 8,
+                  borderRadius: "50%",
+                  background: batteryLoading
+                    ? colors.orange
+                    : batteryError
+                    ? colors.red
+                    : batteryColor,
+                }}
+              />
+
+            </div>
+
+            {/* Battery bar */}
 
             <div
               style={{
@@ -378,36 +638,135 @@ export default function ProducerOverview() {
                 overflow: "hidden",
               }}
             >
+
               <div
                 style={{
-                  width: "82%",
+                  width: `${batterySoc}%`,
                   height: "100%",
-                  background: `linear-gradient(to right, ${colors.green}, #3BB86A)`,
-                  boxShadow: `0 0 10px ${colors.green}66`,
+                  background: `linear-gradient(
+                    to right,
+                    ${batteryColor},
+                    ${batteryColor}
+                  )`,
+                  boxShadow: `0 0 10px ${batteryColor}66`,
+                  transition: "width 0.5s ease",
                 }}
               />
+
             </div>
 
-            <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+            {/* Battery percentage + state */}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                justifyContent: "space-between",
+                gap: 10,
+              }}
+            >
+
               <span
                 style={{
                   fontFamily: "Space Grotesk, sans-serif",
                   fontWeight: 700,
                   fontSize: 26,
-                  color: colors.green,
+                  color: batteryColor,
                 }}
               >
-                82%
+                {batteryLoading
+                  ? "..."
+                  : `${batterySoc}%`}
               </span>
-              <span style={{ color: colors.textMuted, fontSize: 13, fontWeight: 600 }}>
-                Healthy Battery
+
+              <span
+                style={{
+                  color: colors.textMuted,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  textAlign: "right",
+                }}
+              >
+                {batteryLoading
+                  ? "Loading..."
+                  : batteryError
+                  ? "Unavailable"
+                  : `${batteryState} · ${batteryHealth}`}
               </span>
+
             </div>
+
+            {/* Battery technical information */}
+
+            {!batteryLoading && !batteryError && battery && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 10,
+                  marginTop: 8,
+                  color: colors.textMuted,
+                  fontSize: 11,
+                }}
+              >
+
+                <span>
+                  {batteryVoltage} V
+                </span>
+
+                <span>
+                  {batteryPower} W
+                </span>
+
+                <span>
+                  {battery.source}
+                </span>
+
+              </div>
+            )}
+
+            {batteryError && (
+              <button
+                onClick={loadBattery}
+                style={{
+                  marginTop: 8,
+                  background: "rgba(255,107,107,0.12)",
+                  border: "1px solid rgba(255,107,107,0.3)",
+                  color: colors.red,
+                  borderRadius: 7,
+                  padding: "7px 10px",
+                  cursor: "pointer",
+                  fontSize: 12,
+                  fontWeight: 600,
+                }}
+              >
+                Retry
+              </button>
+            )}
+
           </Panel>
 
-          {/* Live price */}
-          <Panel style={{ height: 200, display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {/* =============================================== */}
+          {/* BATTERY DETAILS */}
+          {/* =============================================== */}
+
+          <Panel
+            style={{
+              minHeight: 200,
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "space-between",
+            }}
+          >
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+
               <span
                 style={{
                   width: 8,
@@ -417,6 +776,7 @@ export default function ProducerOverview() {
                   animation: "pulse 1.8s infinite",
                 }}
               />
+
               <h3
                 style={{
                   margin: 0,
@@ -426,11 +786,13 @@ export default function ProducerOverview() {
                   color: colors.text,
                 }}
               >
-                Live Electricity Price
+                Battery Power
               </h3>
+
             </div>
 
             <div style={{ textAlign: "center" }}>
+
               <div
                 style={{
                   fontFamily: "Space Grotesk, sans-serif",
@@ -439,17 +801,34 @@ export default function ProducerOverview() {
                   color: colors.cyan,
                 }}
               >
-                ₹8.35
+                {batteryLoading
+                  ? "..."
+                  : battery
+                  ? `${batteryPower} W`
+                  : "--"}
               </div>
-              <p style={{ color: colors.textMuted, fontSize: 13, fontWeight: 600, marginTop: 4 }}>
-                per kWh
+
+              <p
+                style={{
+                  color: colors.textMuted,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  marginTop: 4,
+                }}
+              >
+                Current battery power
               </p>
+
             </div>
 
             <div
               style={{
-                background: "rgba(95,217,138,0.12)",
-                color: colors.green,
+                background: battery
+                  ? "rgba(63,208,224,0.10)"
+                  : "rgba(255,255,255,0.05)",
+                color: battery
+                  ? colors.cyan
+                  : colors.textMuted,
                 padding: "8px",
                 borderRadius: 8,
                 textAlign: "center",
@@ -457,69 +836,19 @@ export default function ProducerOverview() {
                 fontSize: 13,
               }}
             >
-              ▲ +3.2% Today
+              {batteryLoading
+                ? "Loading battery data..."
+                : battery
+                ? `${batteryState} · ${batteryVoltage} V`
+                : "Battery data unavailable"}
             </div>
+
           </Panel>
+
         </div>
+
       </div>
 
-      {/* Recent transactions */}
-      <div style={{ marginTop: 18 }}>
-        <Panel>
-          <h2
-            style={{
-              fontFamily: "Space Grotesk, sans-serif",
-              fontSize: 17,
-              fontWeight: 600,
-              color: colors.text,
-              margin: "0 0 6px",
-            }}
-          >
-            Recent Transactions
-          </h2>
-
-          <table
-            className="pv-table"
-            style={{
-              width: "100%",
-              borderCollapse: "separate",
-              borderSpacing: 0,
-              marginTop: 18,
-              fontSize: 14,
-            }}
-          >
-            <thead>
-              <tr style={{ borderBottom: `1px solid ${colors.border}` }}>
-                <th>Consumer</th>
-                <th>Energy</th>
-                <th>Price</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-
-            <tbody>
-              {recentTransactions.length === 0 ? (
-                <tr>
-                  <td colSpan={4} style={{ padding: "24px 14px", textAlign: "center", color: colors.textMuted }}>
-                    No transactions yet.
-                  </td>
-                </tr>
-              ) : (
-                recentTransactions.map((item) => (
-                  <tr key={item.id} style={{ borderBottom: `1px solid ${colors.border}` }}>
-                    <td style={{ color: colors.text }}>{item.consumer}</td>
-                    <td style={{ color: colors.text }}>{item.energy} kWh</td>
-                    <td style={{ color: colors.text }}>₹{item.total_price}</td>
-                    <td style={{ color: statusColor(item.status), fontWeight: 700 }}>
-                      {item.status}
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </Panel>
-      </div>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   LineChart,
   Line,
@@ -9,7 +9,10 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-// ---- Design tokens -------------------------------------------------
+// ------------------------------------------------------------
+// DESIGN TOKENS
+// ------------------------------------------------------------
+
 const colors = {
   bg: "#0B1420",
   surface: "#131F30",
@@ -21,30 +24,67 @@ const colors = {
   cyan: "#3FD0E0",
   green: "#5FD98A",
   violet: "#B98CF2",
+  red: "#F87171",
 };
 
 const fontImport = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @keyframes pulse {
-  0% { box-shadow: 0 0 0 0 rgba(63,208,224,0.55); }
-  70% { box-shadow: 0 0 0 8px rgba(63,208,224,0); }
-  100% { box-shadow: 0 0 0 0 rgba(63,208,224,0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(63,208,224,0.55);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(63,208,224,0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(63,208,224,0);
+  }
 }
 
-.ov-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
-.ov-split { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; margin-top: 20px; }
-
-@media (max-width: 900px) {
-  .ov-grid { grid-template-columns: repeat(2, 1fr); }
-  .ov-split { grid-template-columns: 1fr; }
+.ov-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
 }
+
+.ov-split {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+@media (max-width: 1100px) {
+  .ov-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .ov-split {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 520px) {
-  .ov-grid { grid-template-columns: 1fr; }
+  .ov-grid {
+    grid-template-columns: 1fr;
+  }
 }
 `;
 
-function StatCard({ label, value, unit, accent, icon }) {
+// ------------------------------------------------------------
+// STAT CARD
+// ------------------------------------------------------------
+
+function StatCard({
+  label,
+  value,
+  unit,
+  accent,
+  icon,
+}) {
   return (
     <div
       style={{
@@ -68,9 +108,13 @@ function StatCard({ label, value, unit, accent, icon }) {
           marginBottom: 10,
         }}
       >
-        <span style={{ fontSize: 15 }}>{icon}</span>
+        <span style={{ fontSize: 15 }}>
+          {icon}
+        </span>
+
         {label}
       </div>
+
       <div
         style={{
           fontFamily: "Space Grotesk, sans-serif",
@@ -81,6 +125,7 @@ function StatCard({ label, value, unit, accent, icon }) {
         }}
       >
         {value}
+
         <span
           style={{
             fontFamily: "Inter, sans-serif",
@@ -97,41 +142,286 @@ function StatCard({ label, value, unit, accent, icon }) {
   );
 }
 
+// ------------------------------------------------------------
+// MAIN COMPONENT
+// ------------------------------------------------------------
+
 export default function Overview() {
-  const [stats] = useState({
-    energyUsed: 245,
-    moneySpent: 1720,
-    moneySaved: 420,
-    priority: "High",
-    priorityPct: 75,
-  });
+  const username = localStorage.getItem("username");
+
+  const [transactions, setTransactions] = useState([]);
+  const [marketListings, setMarketListings] = useState([]);
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  // ----------------------------------------------------------
+  // FETCH DATA
+  // ----------------------------------------------------------
+
+  useEffect(() => {
+    const fetchOverviewData = async () => {
+      if (!username) {
+        setError("Consumer username not found.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const transactionResponse = await fetch(
+          `http://127.0.0.1:8000/trading/transactions/consumer/${encodeURIComponent(
+            username
+          )}`
+        );
+
+        const marketResponse = await fetch(
+          "http://127.0.0.1:8000/trading/all"
+        );
+
+        if (!transactionResponse.ok) {
+          throw new Error(
+            "Failed to fetch consumer transactions."
+          );
+        }
+
+        if (!marketResponse.ok) {
+          throw new Error(
+            "Failed to fetch marketplace data."
+          );
+        }
+
+        const transactionData =
+          await transactionResponse.json();
+
+        const marketData =
+          await marketResponse.json();
+
+        setTransactions(
+          Array.isArray(transactionData)
+            ? transactionData
+            : []
+        );
+
+        setMarketListings(
+          Array.isArray(marketData)
+            ? marketData
+            : []
+        );
+      } catch (err) {
+        console.error(
+          "Consumer overview error:",
+          err
+        );
+
+        setError(
+          "Unable to load overview data."
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOverviewData();
+  }, [username]);
+
+  // ----------------------------------------------------------
+  // COMPLETED TRANSACTIONS
+  // ----------------------------------------------------------
+
+  const completedTransactions =
+    transactions.filter(
+      (transaction) =>
+        transaction.status === "Completed"
+    );
+
+  // ----------------------------------------------------------
+  // CALCULATE STATISTICS
+  // ----------------------------------------------------------
+
+  const energyPurchased =
+    completedTransactions.reduce(
+      (total, transaction) =>
+        total +
+        Number(transaction.energy || 0),
+      0
+    );
+
+  const moneySpent =
+    completedTransactions.reduce(
+      (total, transaction) =>
+        total +
+        Number(transaction.total_amount || 0),
+      0
+    );
+
+  const purchaseCount =
+    completedTransactions.length;
+
+  const availableEnergy =
+    marketListings.reduce(
+      (total, listing) =>
+        total +
+        Number(listing.energy || 0),
+      0
+    );
+
+  // ----------------------------------------------------------
+  // PRICE HISTORY
+  // ----------------------------------------------------------
 
   const priceData = [
-    { day: "Mon", price: 6.5 },
-    { day: "Tue", price: 6.8 },
-    { day: "Wed", price: 7.0 },
-    { day: "Thu", price: 6.7 },
-    { day: "Fri", price: 7.2 },
-    { day: "Sat", price: 7.5 },
-    { day: "Sun", price: 7.1 },
-  ];
+    ...completedTransactions,
+  ]
+    .reverse()
+    .slice(-7)
+    .map((transaction, index) => ({
+      purchase: `Purchase ${index + 1}`,
+      price: Number(transaction.price || 0),
+    }));
+
+  const chartData =
+    priceData.length > 0
+      ? priceData
+      : [
+          {
+            purchase: "No data",
+            price: 0,
+          },
+        ];
+
+  // ----------------------------------------------------------
+  // MARKET STATUS
+  // ----------------------------------------------------------
+
+  const marketListingsCount =
+    marketListings.length;
+
+  const marketStatus =
+    marketListingsCount > 0
+      ? "Active"
+      : "No Listings";
+
+  const marketPercentage =
+    Math.min(
+      100,
+      marketListingsCount * 10
+    );
 
   const totalSegments = 10;
-  const litSegments = Math.round((stats.priorityPct / 100) * totalSegments);
+
+  const litSegments = Math.round(
+    (marketPercentage / 100) *
+      totalSegments
+  );
+
+  // ----------------------------------------------------------
+  // LOADING
+  // ----------------------------------------------------------
+
+  if (loading) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
+          padding: "32px 28px",
+          fontFamily: "Inter, sans-serif",
+          color: colors.text,
+        }}
+      >
+        <style>{fontImport}</style>
+
+        <h1
+          style={{
+            fontFamily:
+              "Space Grotesk, sans-serif",
+          }}
+        >
+          Loading Overview...
+        </h1>
+
+        <p
+          style={{
+            color: colors.textMuted,
+          }}
+        >
+          Fetching your marketplace activity.
+        </p>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------
+  // ERROR
+  // ----------------------------------------------------------
+
+  if (error) {
+    return (
+      <div
+        style={{
+          minHeight: "100vh",
+          background:
+            "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
+          padding: "32px 28px",
+          fontFamily: "Inter, sans-serif",
+          color: colors.text,
+        }}
+      >
+        <style>{fontImport}</style>
+
+        <h1
+          style={{
+            fontFamily:
+              "Space Grotesk, sans-serif",
+          }}
+        >
+          Consumer Overview
+        </h1>
+
+        <div
+          style={{
+            marginTop: 20,
+            padding: 18,
+            borderRadius: 10,
+            background:
+              "rgba(248,113,113,0.08)",
+            border:
+              "1px solid rgba(248,113,113,0.25)",
+            color: colors.red,
+          }}
+        >
+          {error}
+        </div>
+      </div>
+    );
+  }
+
+  // ----------------------------------------------------------
+  // MAIN UI
+  // ----------------------------------------------------------
 
   return (
     <div
       style={{
         minHeight: "100vh",
-        background: `radial-gradient(circle at 15% 0%, #16233A 0%, ${colors.bg} 55%)`,
+        background:
+          "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
         padding: "32px 28px 60px",
         fontFamily: "Inter, sans-serif",
       }}
     >
       <style>{fontImport}</style>
 
-      {/* Header */}
-      <div style={{ marginBottom: 28 }}>
+      {/* ======================================================
+          HEADER
+      ====================================================== */}
+
+      <div
+        style={{
+          marginBottom: 28,
+        }}
+      >
         <div
           style={{
             color: colors.cyan,
@@ -144,9 +434,11 @@ export default function Overview() {
         >
           Consumer · Live Grid
         </div>
+
         <h1
           style={{
-            fontFamily: "Space Grotesk, sans-serif",
+            fontFamily:
+              "Space Grotesk, sans-serif",
             fontSize: 30,
             fontWeight: 700,
             color: colors.text,
@@ -155,50 +447,79 @@ export default function Overview() {
         >
           Overview
         </h1>
-        <p style={{ color: colors.textMuted, marginTop: 6, fontSize: 14 }}>
-          Monitor your electricity usage and spending in real time.
+
+        <p
+          style={{
+            color: colors.textMuted,
+            marginTop: 6,
+            fontSize: 14,
+          }}
+        >
+          Welcome back,{" "}
+          <strong
+            style={{
+              color: colors.text,
+            }}
+          >
+            {username || "Consumer"}
+          </strong>
+          . Here's your marketplace activity.
         </p>
       </div>
 
-      {/* Stat cards */}
+      {/* ======================================================
+          STAT CARDS
+      ====================================================== */}
+
       <div className="ov-grid">
+
         <StatCard
-          label="Energy Used"
-          value={stats.energyUsed}
+          label="Energy Purchased"
+          value={energyPurchased.toFixed(2)}
           unit="kWh"
           accent={colors.amber}
           icon="⚡"
         />
+
         <StatCard
           label="Money Spent"
-          value={`₹${stats.moneySpent.toLocaleString()}`}
-          unit="today"
+          value={`₹${moneySpent.toFixed(2)}`}
+          unit="total"
           accent={colors.violet}
           icon="💳"
         />
+
         <StatCard
-          label="Savings"
-          value={`₹${stats.moneySaved.toLocaleString()}`}
-          unit="vs. grid"
+          label="Purchases"
+          value={purchaseCount}
+          unit="completed"
           accent={colors.green}
-          icon="📉"
+          icon="📦"
         />
+
         <StatCard
-          label="Priority"
-          value={stats.priority}
-          unit="tier"
+          label="Market Energy"
+          value={availableEnergy.toFixed(2)}
+          unit="kWh available"
           accent={colors.cyan}
-          icon="⭐"
+          icon="🔋"
         />
+
       </div>
 
-      {/* Chart + priority meter */}
+      {/* ======================================================
+          CHART + MARKET STATUS
+      ====================================================== */}
+
       <div className="ov-split">
-        {/* Price chart */}
+
+        {/* PRICE CHART */}
+
         <div
           style={{
             background: colors.surface,
-            border: `1px solid ${colors.border}`,
+            border:
+              `1px solid ${colors.border}`,
             borderRadius: 12,
             padding: "22px 24px",
           }}
@@ -217,64 +538,116 @@ export default function Overview() {
                 height: 9,
                 borderRadius: "50%",
                 background: colors.cyan,
-                animation: "pulse 1.8s infinite",
+                animation:
+                  "pulse 1.8s infinite",
               }}
             />
+
             <h2
               style={{
-                fontFamily: "Space Grotesk, sans-serif",
+                fontFamily:
+                  "Space Grotesk, sans-serif",
                 fontSize: 17,
                 fontWeight: 600,
                 color: colors.text,
                 margin: 0,
               }}
             >
-              Live Electricity Price
+              Purchase Price History
             </h2>
           </div>
 
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={priceData}>
-              <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
+          <ResponsiveContainer
+            width="100%"
+            height={280}
+          >
+            <LineChart data={chartData}>
+
+              <CartesianGrid
+                stroke="rgba(255,255,255,0.06)"
+                vertical={false}
+              />
+
               <XAxis
-                dataKey="day"
+                dataKey="purchase"
                 stroke={colors.textMuted}
-                tick={{ fill: colors.textMuted, fontSize: 12 }}
+                tick={{
+                  fill: colors.textMuted,
+                  fontSize: 11,
+                }}
                 axisLine={false}
                 tickLine={false}
               />
+
               <YAxis
                 stroke={colors.textMuted}
-                tick={{ fill: colors.textMuted, fontSize: 12 }}
+                tick={{
+                  fill: colors.textMuted,
+                  fontSize: 12,
+                }}
                 axisLine={false}
                 tickLine={false}
               />
+
               <Tooltip
                 contentStyle={{
-                  background: colors.surfaceAlt,
-                  border: `1px solid ${colors.border}`,
+                  background:
+                    colors.surfaceAlt,
+                  border:
+                    `1px solid ${colors.border}`,
                   borderRadius: 8,
                   color: colors.text,
                 }}
-                labelStyle={{ color: colors.textMuted }}
+                labelStyle={{
+                  color: colors.textMuted,
+                }}
+                formatter={(value) => [
+                  `₹${Number(value).toFixed(2)}`,
+                  "Price / kWh",
+                ]}
               />
+
               <Line
                 type="monotone"
                 dataKey="price"
                 stroke={colors.cyan}
                 strokeWidth={3}
-                dot={{ r: 3, fill: colors.cyan, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
+                dot={{
+                  r: 4,
+                  fill: colors.cyan,
+                  strokeWidth: 0,
+                }}
+                activeDot={{
+                  r: 6,
+                }}
               />
+
             </LineChart>
           </ResponsiveContainer>
+
+          {completedTransactions.length === 0 && (
+            <div
+              style={{
+                textAlign: "center",
+                color: colors.textMuted,
+                fontSize: 13,
+                marginTop: -15,
+              }}
+            >
+              Your purchase price history will
+              appear here after your first
+              completed purchase.
+            </div>
+          )}
         </div>
 
-        {/* Buying priority gauge */}
+        {/* MARKET STATUS */}
+
         <div
           style={{
             background: colors.surface,
-            border: `1px solid ${colors.border}`,
+            border:
+              `1px solid ${colors.border}`,
             borderRadius: 12,
             padding: "22px 24px",
             display: "flex",
@@ -286,28 +659,43 @@ export default function Overview() {
         >
           <h2
             style={{
-              fontFamily: "Space Grotesk, sans-serif",
+              fontFamily:
+                "Space Grotesk, sans-serif",
               fontSize: 17,
               fontWeight: 600,
               color: colors.text,
               margin: 0,
             }}
           >
-            Buying Priority
+            Marketplace
           </h2>
 
-          <div style={{ display: "flex", gap: 4, marginTop: 26 }}>
-            {Array.from({ length: totalSegments }).map((_, i) => (
+          {/* STATUS SEGMENTS */}
+
+          <div
+            style={{
+              display: "flex",
+              gap: 4,
+              marginTop: 26,
+            }}
+          >
+            {Array.from({
+              length: totalSegments,
+            }).map((_, index) => (
               <div
-                key={i}
+                key={index}
                 style={{
                   width: 10,
                   height: 28,
                   borderRadius: 2,
                   background:
-                    i < litSegments ? colors.violet : "rgba(255,255,255,0.08)",
+                    index < litSegments
+                      ? colors.cyan
+                      : "rgba(255,255,255,0.08)",
                   boxShadow:
-                    i < litSegments ? `0 0 8px ${colors.violet}66` : "none",
+                    index < litSegments
+                      ? `0 0 8px ${colors.cyan}66`
+                      : "none",
                 }}
               />
             ))}
@@ -315,20 +703,210 @@ export default function Overview() {
 
           <div
             style={{
-              fontFamily: "Space Grotesk, sans-serif",
+              fontFamily:
+                "Space Grotesk, sans-serif",
               fontWeight: 700,
               fontSize: 26,
-              color: colors.violet,
+              color: colors.cyan,
               marginTop: 22,
             }}
           >
-            {stats.priority.toUpperCase()}
+            {marketStatus.toUpperCase()}
           </div>
-          <p style={{ color: colors.textMuted, marginTop: 4, fontSize: 13 }}>
-            Preferred Consumer
+
+          <p
+            style={{
+              color: colors.textMuted,
+              marginTop: 4,
+              fontSize: 13,
+            }}
+          >
+            {marketListingsCount} active listing
+            {marketListingsCount !== 1
+              ? "s"
+              : ""}
           </p>
+
+          <div
+            style={{
+              marginTop: 14,
+              color: colors.textMuted,
+              fontSize: 12,
+            }}
+          >
+            {availableEnergy.toFixed(2)} kWh
+            currently available
+          </div>
         </div>
+
       </div>
+
+      {/* ======================================================
+          RECENT PURCHASES
+      ====================================================== */}
+
+      <div
+        style={{
+          marginTop: 20,
+          background: colors.surface,
+          border:
+            `1px solid ${colors.border}`,
+          borderRadius: 12,
+          padding: "22px 24px",
+        }}
+      >
+        <h2
+          style={{
+            fontFamily:
+              "Space Grotesk, sans-serif",
+            fontSize: 17,
+            fontWeight: 600,
+            color: colors.text,
+            marginTop: 0,
+            marginBottom: 18,
+          }}
+        >
+          Recent Purchases
+        </h2>
+
+        {completedTransactions.length === 0 ? (
+          <div
+            style={{
+              padding: 24,
+              textAlign: "center",
+              color: colors.textMuted,
+              background:
+                "rgba(255,255,255,0.02)",
+              borderRadius: 8,
+            }}
+          >
+            No completed purchases yet.
+          </div>
+        ) : (
+          <div
+            style={{
+              overflowX: "auto",
+            }}
+          >
+            <table
+              style={{
+                width: "100%",
+                borderCollapse: "collapse",
+              }}
+            >
+              <thead>
+                <tr>
+
+                  <th style={headerStyle}>
+                    Producer
+                  </th>
+
+                  <th style={headerStyle}>
+                    Energy
+                  </th>
+
+                  <th style={headerStyle}>
+                    Price / kWh
+                  </th>
+
+                  <th style={headerStyle}>
+                    Total
+                  </th>
+
+                  <th style={headerStyle}>
+                    Date
+                  </th>
+
+                  <th style={headerStyle}>
+                    Status
+                  </th>
+
+                </tr>
+              </thead>
+
+              <tbody>
+
+                {completedTransactions
+                  .slice(0, 5)
+                  .map((transaction) => (
+                    <tr key={transaction.id}>
+
+                      <td style={cellStyle}>
+                        {transaction.producer}
+                      </td>
+
+                      <td style={cellStyle}>
+                        {Number(
+                          transaction.energy
+                        ).toFixed(2)}{" "}
+                        kWh
+                      </td>
+
+                      <td style={cellStyle}>
+                        ₹
+                        {Number(
+                          transaction.price
+                        ).toFixed(2)}
+                      </td>
+
+                      <td style={cellStyle}>
+                        ₹
+                        {Number(
+                          transaction.total_amount
+                        ).toFixed(2)}
+                      </td>
+
+                      <td style={cellStyle}>
+                        {transaction.created_at
+                          ? new Date(
+                              transaction.created_at
+                            ).toLocaleString()
+                          : "-"}
+                      </td>
+
+                      <td
+                        style={{
+                          ...cellStyle,
+                          color: colors.green,
+                          fontWeight: 600,
+                        }}
+                      >
+                        {transaction.status}
+                      </td>
+
+                    </tr>
+                  ))}
+
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }
+
+// ------------------------------------------------------------
+// TABLE STYLES
+// ------------------------------------------------------------
+
+const headerStyle = {
+  textAlign: "left",
+  padding: "12px",
+  backgroundColor: "#182742",
+  color: "#9FB0C9",
+  fontSize: "11px",
+  textTransform: "uppercase",
+  letterSpacing: "0.06em",
+  borderBottom:
+    "1px solid rgba(255,255,255,0.07)",
+};
+
+const cellStyle = {
+  padding: "12px",
+  color: "#EDF1F7",
+  fontSize: "13px",
+  borderBottom:
+    "1px solid rgba(255,255,255,0.06)",
+};

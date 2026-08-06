@@ -1,6 +1,6 @@
 import axios from "axios";
 
-const API_KEY = "YOUR_WEATHER_API_KEY"; // Replace with your actual WeatherAPI key  
+const API_KEY = "174cde1baa4845e4a5564559261807"; // Replace with your actual WeatherAPI key  
 
 const BASE_URL = "https://api.weatherapi.com/v1";
 export const getWeatherData = async (latitude, longitude) => {

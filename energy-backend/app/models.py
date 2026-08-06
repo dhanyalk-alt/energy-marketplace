@@ -52,4 +52,59 @@ class BuyRequest(Base):
 
     total_price = Column(Float)
 
-    status = Column(String, default="Pending")    
+    status = Column(String, default="Pending")   
+
+class Transaction(Base):
+    __tablename__ = "transactions"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    producer = Column(String, nullable=False)
+    consumer = Column(String, nullable=False)
+
+    listing_id = Column(Integer, ForeignKey("trading.id"), nullable=False)
+    request_id = Column(Integer, ForeignKey("buy_requests.id"), nullable=False)
+
+    energy = Column(Float, nullable=False)
+    price = Column(Float, nullable=False)
+    total_amount = Column(Float, nullable=False)
+
+    status = Column(String, default="Completed", nullable=False)
+
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False) 
+class Review(Base):
+    __tablename__ = "reviews"
+
+    id = Column(Integer, primary_key=True, index=True)
+
+    producer = Column(
+        String,
+        nullable=False
+    )
+
+    consumer = Column(
+        String,
+        nullable=False
+    )
+
+    transaction_id = Column(
+        Integer,
+        ForeignKey("transactions.id"),
+        nullable=False
+    )
+
+    rating = Column(
+        Integer,
+        nullable=False
+    )
+
+    comment = Column(
+        String,
+        nullable=True
+    )
+
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=False
+    )

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+
 import axios from "axios";
 
 // ---- Design tokens (shared with the rest of the app) ------------------
@@ -57,12 +58,16 @@ const statusBg = (status) =>
     ? "rgba(255,107,107,0.14)"
     : "rgba(255,138,101,0.14)";
 
+
+
 export default function RequestBuying() {
   const [requests, setRequests] = useState([]);
+  const [transactions, setTransactions] = useState([]);
   const username = localStorage.getItem("username");
 
   useEffect(() => {
     loadRequests();
+    loadTransactions();
   }, []);
 
   const loadRequests = async () => {
@@ -81,6 +86,19 @@ export default function RequestBuying() {
       console.log(err);
     }
   };
+  const loadTransactions = async () => {
+  try {
+    const response = await axios.get(
+      `http://127.0.0.1:8000/trading/transactions/consumer/${encodeURIComponent(
+        username
+      )}`
+    );
+
+    setTransactions(response.data);
+  } catch (err) {
+    console.log("Transaction history error:", err);
+  }
+};
 
   const pendingCount = requests.filter((r) => r.status === "Pending").length;
 
@@ -202,6 +220,139 @@ export default function RequestBuying() {
                         style={{
                           color: statusColor(item.status),
                           background: statusBg(item.status),
+                          fontWeight: 700,
+                          fontSize: 12,
+                          padding: "5px 12px",
+                          borderRadius: 20,
+                        }}
+                      >
+                        {item.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {/* Completed Purchases */}
+      <div
+        style={{
+          background: colors.surface,
+          border: `1px solid ${colors.border}`,
+          borderRadius: 12,
+          padding: "22px 24px",
+          marginTop: 20,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginBottom: 18,
+          }}
+        >
+          <div>
+            <h2
+              style={{
+                fontFamily: "Space Grotesk, sans-serif",
+                fontSize: 20,
+                color: colors.text,
+                margin: 0,
+              }}
+            >
+              Completed Purchases
+            </h2>
+
+            <p
+              style={{
+                color: colors.textMuted,
+                margin: "6px 0 0",
+                fontSize: 13,
+              }}
+            >
+              Your completed energy purchases from producers.
+            </p>
+          </div>
+
+          <div
+            style={{
+              background: "rgba(95,217,138,0.12)",
+              color: colors.green,
+              padding: "8px 14px",
+              borderRadius: 20,
+              fontSize: 12,
+              fontWeight: 700,
+            }}
+          >
+            {transactions.length} completed
+          </div>
+        </div>
+
+        <div style={{ overflowX: "auto" }}>
+          <table
+            className="rb-table"
+            style={{
+              width: "100%",
+              borderCollapse: "separate",
+              borderSpacing: 0,
+            }}
+          >
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Producer</th>
+                <th>Energy</th>
+                <th>Price/kWh</th>
+                <th>Total Amount</th>
+                <th>Date</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {transactions.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    style={{
+                      padding: "36px 10px",
+                      color: colors.textMuted,
+                    }}
+                  >
+                    No completed purchases yet.
+                  </td>
+                </tr>
+              ) : (
+                transactions.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.id}</td>
+
+                    <td>{item.producer}</td>
+
+                    <td>
+                      {Number(item.energy).toFixed(2)} kWh
+                    </td>
+
+                    <td>
+                      ₹{Number(item.price).toFixed(2)}
+                    </td>
+
+                    <td>
+                      ₹{Number(item.total_amount).toFixed(2)}
+                    </td>
+
+                    <td>
+                      {new Date(item.created_at).toLocaleString()}
+                    </td>
+
+                    <td>
+                      <span
+                        style={{
+                          color: colors.green,
+                          background: "rgba(95,217,138,0.14)",
                           fontWeight: 700,
                           fontSize: 12,
                           padding: "5px 12px",

@@ -1,8 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.schemas import TradingCreate, BuyRequestCreate
+
+from app.schemas import (
+    TradingCreate,
+    BuyRequestCreate,
+    TransactionResponse,
+    ReviewCreate,
+    ReviewResponse
+)
 
 from app.crud import (
     create_trading,
@@ -10,8 +17,14 @@ from app.crud import (
     buy_energy,
     get_requests,
     accept_request,
-    reject_request
+    reject_request,
+    get_transactions_by_producer,
+    get_transactions_by_consumer,
+    get_market_data,
+    create_review,
+    get_producer_reviews
 )
+
 
 router = APIRouter(
     prefix="/trading",
@@ -24,6 +37,7 @@ router = APIRouter(
 # -----------------------------
 @router.get("/")
 async def test():
+
     return {
         "message": "Trading API is working"
     }
@@ -55,29 +69,51 @@ async def add_trading(
 async def get_all(
     db: AsyncSession = Depends(get_db)
 ):
+
     return await get_all_trading(db)
 
 
-from fastapi import HTTPException
-
+# -----------------------------
+# Buy Energy
+# -----------------------------
 @router.post("/buy/{id}")
 async def buy_listing(
     id: int,
     request: BuyRequestCreate,
     db: AsyncSession = Depends(get_db)
 ):
+
     try:
+
         return await buy_energy(
             db,
             id,
             request.consumer,
             request.energy
         )
+
     except Exception as e:
+
         raise HTTPException(
             status_code=400,
             detail=str(e)
         )
+
+
+# -----------------------------
+# Producer Market Insights
+# -----------------------------
+@router.get("/market/{username}")
+async def producer_market(
+    username: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    return await get_market_data(
+        db,
+        username
+    )
+
 
 # -----------------------------
 # View Buy Requests
@@ -86,6 +122,7 @@ async def buy_listing(
 async def view_requests(
     db: AsyncSession = Depends(get_db)
 ):
+
     return await get_requests(db)
 
 
@@ -97,7 +134,20 @@ async def accept(
     id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    return await accept_request(db, id)
+
+    try:
+
+        return await accept_request(
+            db,
+            id
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
 
 
 # -----------------------------
@@ -108,4 +158,108 @@ async def reject(
     id: int,
     db: AsyncSession = Depends(get_db)
 ):
-    return await reject_request(db, id)
+
+    try:
+
+        return await reject_request(
+            db,
+            id
+        )
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+
+# -----------------------------
+# Producer Transactions
+# -----------------------------
+@router.get(
+    "/transactions/producer/{username}",
+    response_model=list[TransactionResponse]
+)
+async def producer_transactions(
+    username: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    return await get_transactions_by_producer(
+        db,
+        username
+    )
+
+
+# -----------------------------
+# Consumer Transactions
+# -----------------------------
+@router.get(
+    "/transactions/consumer/{username}",
+    response_model=list[TransactionResponse]
+)
+async def consumer_transactions(
+    username: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    return await get_transactions_by_consumer(
+        db,
+        username
+    )
+
+
+# =========================================================
+# REVIEWS
+# =========================================================
+
+
+# -----------------------------
+# Create Review
+# -----------------------------
+@router.post(
+    "/review",
+    response_model=ReviewResponse
+)
+async def submit_review(
+    review: ReviewCreate,
+    consumer: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    try:
+
+        new_review = await create_review(
+            db=db,
+            transaction_id=review.transaction_id,
+            consumer=consumer,
+            rating=review.rating,
+            comment=review.comment
+        )
+
+        return new_review
+
+    except Exception as e:
+
+        raise HTTPException(
+            status_code=400,
+            detail=str(e)
+        )
+
+
+# -----------------------------
+# Get Producer Reviews
+# -----------------------------
+@router.get(
+    "/reviews/{producer}"
+)
+async def producer_reviews(
+    producer: str,
+    db: AsyncSession = Depends(get_db)
+):
+
+    return await get_producer_reviews(
+        db,
+        producer
+    )
