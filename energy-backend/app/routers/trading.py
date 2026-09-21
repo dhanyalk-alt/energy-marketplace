@@ -51,6 +51,7 @@ from app.models import (
     Trading,
     BuyRequest,
     Transaction,
+    User,
 )
 
 
@@ -1009,14 +1010,17 @@ async def producer_accept_negotiation(
             raise HTTPException(status_code=403, detail="Only the producer can accept this negotiation.")
 
         if negotiation.status == "Accepted":
+            producer_id = await db.scalar(
+                select(User.id).where(User.username == negotiation.producer)
+            )
+            consumer_id = await db.scalar(
+                select(User.id).where(User.username == negotiation.consumer)
+            )
             result = await db.execute(
                 select(Transaction)
-                .join(BuyRequest, Transaction.request_id == BuyRequest.id)
                 .where(
-                    BuyRequest.listing_id == negotiation.listing_id,
-                    BuyRequest.consumer == negotiation.consumer,
-                    BuyRequest.producer == negotiation.producer,
-                    BuyRequest.energy == negotiation.energy,
+                    Transaction.producer_id == producer_id,
+                    Transaction.consumer_id == consumer_id,
                 )
                 .order_by(Transaction.id.desc())
             )
@@ -1071,13 +1075,21 @@ async def producer_accept_negotiation(
 
         negotiation.status = "Accepted"
 
+        producer_id = await db.scalar(
+            select(User.id).where(User.username == negotiation.producer)
+        )
+        consumer_id = await db.scalar(
+            select(User.id).where(User.username == negotiation.consumer)
+        )
+        if producer_id is None or consumer_id is None:
+            raise HTTPException(status_code=400, detail="Transaction user was not found.")
+
         transaction = Transaction(
-            producer=negotiation.producer,
-            consumer=negotiation.consumer,
-            listing_id=negotiation.listing_id,
-            request_id=buy_request.id,
-            energy=negotiation.energy,
-            price=negotiation.negotiated_price,
+            producer_id=producer_id,
+            consumer_id=consumer_id,
+            listing_id=None,
+            energy_kwh=negotiation.energy,
+            price_per_kwh=negotiation.negotiated_price,
             total_amount=total_amount,
             status="Completed",
         )

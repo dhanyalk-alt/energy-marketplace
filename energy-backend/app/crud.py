@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import aliased
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -14,6 +15,34 @@ from app.auth import (
     hash_password,
     verify_password,
 )
+
+
+async def _get_user_id(db: AsyncSession, username: str) -> int:
+    result = await db.execute(
+        select(User.id).where(User.username == username)
+    )
+    user_id = result.scalar_one_or_none()
+
+    if user_id is None:
+        raise Exception(f"User '{username}' was not found.")
+
+    return user_id
+
+
+def _transaction_response(transaction: Transaction, producer: str, consumer: str) -> dict:
+    """Expose stable API names while reading the live legacy table columns."""
+    return {
+        "id": transaction.id,
+        "producer": producer,
+        "consumer": consumer,
+        "listing_id": transaction.listing_id,
+        "request_id": None,
+        "energy": transaction.energy_kwh,
+        "price": transaction.price_per_kwh,
+        "total_amount": transaction.total_amount,
+        "status": transaction.status,
+        "created_at": transaction.created_at,
+    }
 
 
 # =========================================================
@@ -161,12 +190,14 @@ async def accept_request(
 
     # Create transaction
     transaction = Transaction(
-        producer=request.producer,
-        consumer=request.consumer,
-        listing_id=listing.id,
-        request_id=request.id,
-        energy=request.energy,
-        price=listing.price,
+        producer_id=await _get_user_id(db, request.producer),
+        consumer_id=await _get_user_id(db, request.consumer),
+        # The active listing table is `trading`, but the existing transaction
+        # table references the legacy `energy_listings` table. Its link is
+        # nullable, so leave it empty instead of writing an invalid FK value.
+        listing_id=None,
+        energy_kwh=request.energy,
+        price_per_kwh=listing.price,
         total_amount=request.total_price,
         status="Completed",
     )
@@ -397,17 +428,22 @@ async def get_transactions_by_producer(
     db: AsyncSession,
     producer: str,
 ):
+    producer_user = aliased(User)
+    consumer_user = aliased(User)
     result = await db.execute(
-        select(Transaction)
-        .where(
-            Transaction.producer == producer
-        )
+        select(Transaction, producer_user.username, consumer_user.username)
+        .join(producer_user, Transaction.producer_id == producer_user.id)
+        .join(consumer_user, Transaction.consumer_id == consumer_user.id)
+        .where(producer_user.username == producer)
         .order_by(
             Transaction.created_at.desc()
         )
     )
 
-    return result.scalars().all()
+    return [
+        _transaction_response(transaction, producer_name, consumer_name)
+        for transaction, producer_name, consumer_name in result.all()
+    ]
 
 
 # =========================================================
@@ -418,17 +454,22 @@ async def get_transactions_by_consumer(
     db: AsyncSession,
     consumer: str,
 ):
+    producer_user = aliased(User)
+    consumer_user = aliased(User)
     result = await db.execute(
-        select(Transaction)
-        .where(
-            Transaction.consumer == consumer
-        )
+        select(Transaction, producer_user.username, consumer_user.username)
+        .join(producer_user, Transaction.producer_id == producer_user.id)
+        .join(consumer_user, Transaction.consumer_id == consumer_user.id)
+        .where(consumer_user.username == consumer)
         .order_by(
             Transaction.created_at.desc()
         )
     )
 
-    return result.scalars().all()
+    return [
+        _transaction_response(transaction, producer_name, consumer_name)
+        for transaction, producer_name, consumer_name in result.all()
+    ]
 
 
 # =========================================================
@@ -600,8 +641,9 @@ async def accept_negotiation(
         if existing_request is not None:
             result = await db.execute(
                 select(Transaction).where(
-                    Transaction.request_id
-                    == existing_request.id
+                    Transaction.producer_id == await _get_user_id(db, existing_request.producer),
+                    Transaction.consumer_id == await _get_user_id(db, existing_request.consumer),
+                    Transaction.listing_id == existing_request.listing_id,
                 )
             )
 
@@ -700,12 +742,11 @@ async def accept_negotiation(
 
     # Create transaction using negotiated price
     transaction = Transaction(
-        producer=negotiation.producer,
-        consumer=negotiation.consumer,
-        listing_id=negotiation.listing_id,
-        request_id=buy_request.id,
-        energy=negotiation.energy,
-        price=negotiation.negotiated_price,
+        producer_id=await _get_user_id(db, negotiation.producer),
+        consumer_id=await _get_user_id(db, negotiation.consumer),
+        listing_id=None,
+        energy_kwh=negotiation.energy,
+        price_per_kwh=negotiation.negotiated_price,
         total_amount=total_amount,
         status="Completed",
     )
@@ -796,7 +837,7 @@ async def create_review(
             "Transaction not found."
         )
 
-    if transaction.consumer != consumer:
+    if transaction.consumer_id != await _get_user_id(db, consumer):
         raise Exception(
             "You can review only your own purchases."
         )

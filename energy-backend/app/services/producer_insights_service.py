@@ -5,7 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.battery_service import get_available_battery_energy
-from app.models import BuyRequest, Review, Trading, Transaction
+from app.models import BuyRequest, Review, Trading, Transaction, User
 
 
 URGENCY_WEIGHTS = {
@@ -64,8 +64,9 @@ def _weather_generation(weather: dict) -> dict:
 
 
 async def _consumer_reliability(db: AsyncSession, consumer: str) -> dict:
+    consumer_id = await db.scalar(select(User.id).where(User.username == consumer))
     transactions = (await db.execute(
-        select(Transaction).where(Transaction.consumer == consumer)
+        select(Transaction).where(Transaction.consumer_id == consumer_id)
     )).scalars().all()
     requests = (await db.execute(
         select(BuyRequest).where(BuyRequest.consumer == consumer)
@@ -155,8 +156,9 @@ async def get_producer_insights(
         BuyRequest.producer == producer,
         BuyRequest.status == "Pending",
     ))).scalars().all()
+    producer_id = await db.scalar(select(User.id).where(User.username == producer))
     transactions = (await db.execute(select(Transaction).where(
-        Transaction.producer == producer,
+        Transaction.producer_id == producer_id,
     ).order_by(Transaction.created_at.desc()).limit(20))).scalars().all()
 
     battery = get_available_battery_energy()
@@ -165,7 +167,7 @@ async def get_producer_insights(
     supply = sum(_number(item.energy) for item in listings)
     demand = sum(_number(item.energy) for item in requests)
     current_prices = [_number(item.price) for item in listings if _number(item.price) > 0]
-    recent_prices = [_number(item.price) for item in transactions if _number(item.price) > 0]
+    recent_prices = [_number(item.price_per_kwh) for item in transactions if _number(item.price_per_kwh) > 0]
     current_price = mean(current_prices) if current_prices else (mean(recent_prices) if recent_prices else 0.0)
     recent_price = mean(recent_prices) if recent_prices else None
     weather_outlook = _weather_generation(weather or {})

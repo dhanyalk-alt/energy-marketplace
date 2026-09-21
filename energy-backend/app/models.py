@@ -167,35 +167,32 @@ class Transaction(Base):
         index=True,
     )
 
-    producer = Column(
-        String,
+    producer_id = Column(
+        Integer,
+        ForeignKey("users.id"),
         nullable=False,
     )
 
-    consumer = Column(
-        String,
+    consumer_id = Column(
+        Integer,
+        ForeignKey("users.id"),
         nullable=False,
     )
 
     listing_id = Column(
         Integer,
-        ForeignKey("trading.id"),
-        nullable=False,
-    )
-
-    # Links the transaction to the actual BuyRequest
-    request_id = Column(
-        Integer,
-        ForeignKey("buy_requests.id"),
+        # The live database references its legacy energy_listings table.
+        # Do not declare a SQLAlchemy ForeignKey here because that legacy table
+        # is not part of this application's metadata.
         nullable=True,
     )
 
-    energy = Column(
+    energy_kwh = Column(
         Float,
         nullable=False,
     )
 
-    price = Column(
+    price_per_kwh = Column(
         Float,
         nullable=False,
     )
@@ -208,13 +205,13 @@ class Transaction(Base):
     status = Column(
         String,
         default="Completed",
-        nullable=False,
+        nullable=True,
     )
 
     created_at = Column(
         DateTime,
         default=datetime.utcnow,
-        nullable=False,
+        nullable=True,
     )
 
 
