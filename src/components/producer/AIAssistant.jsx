@@ -1,656 +1,3065 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import { API_BASE_URL } from "../../config";
 
-const API_URL = "http://127.0.0.1:8000";
+const API = API_BASE_URL;
 
-export default function AIAssistant({ username }) {
-  const [market, setMarket] = useState(null);
-  const [producerMarket, setProducerMarket] = useState(null);
-
-  const [insight, setInsight] = useState(
-    "Loading your energy insights..."
-  );
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
+export default function AIAssistant() {
 
   // =========================================================
-  // LOAD DATA
+  // LOGGED-IN PRODUCER
+  // =========================================================
+
+  const username =
+    localStorage.getItem("username") || "";
+
+  // =========================================================
+  // UI STATE
+  // =========================================================
+
+  const [showBriefing, setShowBriefing] =
+    useState(true);
+
+  const [isSpeaking, setIsSpeaking] =
+    useState(false);
+
+  const [input, setInput] =
+    useState("");
+
+  const [messages, setMessages] =
+    useState([]);
+
+  const [isNegotiating, setIsNegotiating] =
+    useState(false);
+
+  // =========================================================
+  // REAL BACKEND DATA
+  // =========================================================
+
+  const [battery, setBattery] =
+    useState(null);
+
+  const [requests, setRequests] =
+    useState([]);
+
+  const [market, setMarket] =
+    useState(null);
+
+  const [listings, setListings] =
+    useState([]);
+
+  const [insights, setInsights] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  // =========================================================
+  // FETCH BATTERY
+  // =========================================================
+
+  const fetchBattery = async () => {
+
+    const response = await fetch(
+      `${API}/battery/status`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load battery status."
+      );
+    }
+
+    return await response.json();
+  };
+
+  // =========================================================
+  // FETCH BUY REQUESTS
+  // =========================================================
+
+  const fetchRequests = async () => {
+
+    const response = await fetch(
+      `${API}/trading/requests`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load buying requests."
+      );
+    }
+
+    const data = await response.json();
+
+    return Array.isArray(data) ? data : [];
+  };
+
+  // =========================================================
+  // FETCH MARKET
+  // =========================================================
+
+  const fetchMarket = async () => {
+
+    if (!username) {
+      return null;
+    }
+
+    const response = await fetch(
+      `${API}/trading/market/${encodeURIComponent(
+        username
+      )}`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load market information."
+      );
+    }
+
+    return await response.json();
+  };
+
+  // =========================================================
+  // FETCH ALL LISTINGS
+  // =========================================================
+
+  const fetchListings = async () => {
+
+    const response = await fetch(
+      `${API}/trading/all`
+    );
+
+    if (!response.ok) {
+      throw new Error(
+        "Unable to load energy listings."
+      );
+    }
+
+    const data = await response.json();
+
+    return Array.isArray(data) ? data : [];
+  };
+
+  const fetchInsights = async () => {
+    const token = localStorage.getItem("energy_marketplace_jwt");
+    if (!token) {
+      throw new Error("Producer authentication is required for AI insights.");
+    }
+
+    let weather = {};
+    try {
+      weather = JSON.parse(
+        localStorage.getItem("energy_marketplace_weather") || "{}"
+      );
+    } catch {
+      weather = {};
+    }
+
+    const response = await fetch(`${API}/producer/insights`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ weather }),
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to load AI recommendations.");
+    }
+
+    return response.json();
+  };
+
+  // =========================================================
+  // LOAD ALL REAL DATA
   // =========================================================
 
   const loadAssistantData = async () => {
-    if (!username) {
-      setInsight("Waiting for producer information...");
-      return;
-    }
 
     try {
+
       setLoading(true);
       setError("");
 
-      // -----------------------------------------------------
-      // 1. IEX MARKET DATA
-      // -----------------------------------------------------
+      const results = await Promise.allSettled([
+        fetchBattery(),
+        fetchRequests(),
+        fetchMarket(),
+        fetchListings(),
+        fetchInsights()
+      ]);
 
-      const marketResponse = await fetch(
-        `${API_URL}/market/iex/latest`
-      );
+      const [
+        batteryResult,
+        requestsResult,
+        marketResult,
+        listingsResult,
+        insightsResult,
+      ] = results;
 
-      if (!marketResponse.ok) {
+      const successfulSources = results.filter(
+        (result) => result.status === "fulfilled"
+      ).length;
+
+      if (successfulSources === 0) {
         throw new Error(
-          "Unable to load IEX market data."
+          "The energy service could not be reached. Please try again in a moment."
         );
       }
 
-      const marketResult =
-        await marketResponse.json();
+      const batteryData =
+        batteryResult.status === "fulfilled"
+          ? batteryResult.value
+          : null;
+
+      const requestData =
+        requestsResult.status === "fulfilled"
+          ? requestsResult.value
+          : [];
 
       const marketData =
-        marketResult.record;
+        marketResult.status === "fulfilled"
+          ? marketResult.value
+          : null;
 
-      // -----------------------------------------------------
-      // 2. PRODUCER MARKET DATA
-      // -----------------------------------------------------
+      const listingData =
+        listingsResult.status === "fulfilled"
+          ? listingsResult.value
+          : [];
 
-      const producerResponse = await fetch(
-        `${API_URL}/trading/market/${encodeURIComponent(
-          username
-        )}`
-      );
+      const insightData =
+        insightsResult.status === "fulfilled"
+          ? insightsResult.value
+          : null;
 
-      if (!producerResponse.ok) {
-        throw new Error(
-          "Unable to load producer market data."
+      setBattery(batteryData);
+
+      // Only requests belonging to this producer
+      const producerRequests =
+        requestData.filter(
+          (request) =>
+            request.producer === username
         );
-      }
 
-      const producerData =
-        await producerResponse.json();
-
-
-      // -----------------------------------------------------
-      // SAVE DATA
-      // -----------------------------------------------------
+      setRequests(producerRequests);
 
       setMarket(marketData);
-      setProducerMarket(producerData);
 
+      setListings(listingData);
 
-      // -----------------------------------------------------
-      // GENERATE INSIGHT
-      // -----------------------------------------------------
-
-      generateInsight(
-        marketData,
-        producerData
-      );
+      setInsights(insightData);
 
     } catch (err) {
 
       console.error(
-        "AI Assistant Error:",
+        "AI Assistant data error:",
         err
       );
 
-      setError(err.message);
-
-      setInsight(
-        "I couldn't load the latest energy information."
+      setError(
+        "The energy service could not be reached. Please try again in a moment."
       );
 
     } finally {
 
       setLoading(false);
-
     }
   };
 
-
   // =========================================================
-  // GENERATE AI INSIGHT
-  // =========================================================
-
-  const generateInsight = (
-    marketData,
-    producerData
-  ) => {
-
-    if (!marketData) {
-
-      setInsight(
-        "IEX market data is currently unavailable."
-      );
-
-      return;
-    }
-
-
-    const marketPrice =
-      Number(marketData.mcp_rs_kwh);
-
-
-    const listings =
-      producerData?.listings || [];
-
-
-    // -------------------------------------------------------
-    // NO OTHER PRODUCERS
-    // -------------------------------------------------------
-
-    if (listings.length === 0) {
-
-      setInsight(
-        `The current IEX market price is ₹${marketPrice}/kWh. ` +
-        `There are currently no other active producer listings ` +
-        `available for comparison.`
-      );
-
-      return;
-    }
-
-
-    // -------------------------------------------------------
-    // GET VALID PRICES
-    // -------------------------------------------------------
-
-    const prices = listings
-      .map(
-        listing => Number(listing.price)
-      )
-      .filter(
-        price => !Number.isNaN(price)
-      );
-
-
-    if (prices.length === 0) {
-
-      setInsight(
-        `The current IEX market price is ₹${marketPrice}/kWh. ` +
-        `No valid producer prices are currently available.`
-      );
-
-      return;
-    }
-
-
-    // -------------------------------------------------------
-    // CALCULATE MARKET STATISTICS
-    // -------------------------------------------------------
-
-    const lowestPrice =
-      Math.min(...prices);
-
-    const highestPrice =
-      Math.max(...prices);
-
-    const averagePrice =
-      prices.reduce(
-        (sum, price) => sum + price,
-        0
-      ) / prices.length;
-
-
-    // -------------------------------------------------------
-    // GENERATE RECOMMENDATION
-    // -------------------------------------------------------
-
-    if (marketPrice < lowestPrice) {
-
-      setInsight(
-        `The current IEX market price is ₹${marketPrice}/kWh. ` +
-        `Other producers are selling from ` +
-        `₹${lowestPrice.toFixed(2)} to ` +
-        `₹${highestPrice.toFixed(2)}/kWh. ` +
-        `The IEX price is currently below their listed prices.`
-      );
-
-    } else if (marketPrice > highestPrice) {
-
-      setInsight(
-        `The current IEX market price is ₹${marketPrice}/kWh. ` +
-        `Other producers are selling between ` +
-        `₹${lowestPrice.toFixed(2)} and ` +
-        `₹${highestPrice.toFixed(2)}/kWh. ` +
-        `The current market price is above their listings.`
-      );
-
-    } else {
-
-      setInsight(
-        `The current IEX market price is ₹${marketPrice}/kWh. ` +
-        `Other producers are selling between ` +
-        `₹${lowestPrice.toFixed(2)} and ` +
-        `₹${highestPrice.toFixed(2)}/kWh. ` +
-        `Their average selling price is ` +
-        `₹${averagePrice.toFixed(2)}/kWh.`
-      );
-
-    }
-  };
-
-
-  // =========================================================
-  // LOAD WHEN USERNAME CHANGES
+  // LOAD DATA WHEN PAGE OPENS
   // =========================================================
 
   useEffect(() => {
 
+    if (!username) {
+
+      setLoading(false);
+
+      setError(
+        "Producer username was not found."
+      );
+
+      return;
+    }
+
     loadAssistantData();
+
+    return () => {
+      window.speechSynthesis.cancel();
+    };
 
   }, [username]);
 
+  // =========================================================
+  // PRODUCER'S ACTIVE LISTINGS
+  // =========================================================
+
+  const producerListings = useMemo(() => {
+
+    return listings.filter(
+      (listing) =>
+        listing.producer === username &&
+        Number(listing.energy || 0) > 0
+    );
+
+  }, [listings, username]);
+
+  // =========================================================
+  // PRODUCER'S CURRENT ASKING PRICE
+  // =========================================================
+
+  const producerPrice = useMemo(() => {
+
+    if (
+      producerListings.length === 0
+    ) {
+      return null;
+    }
+
+    const prices =
+      producerListings
+        .map(
+          (listing) =>
+            Number(listing.price)
+        )
+        .filter(
+          (price) =>
+            Number.isFinite(price)
+        );
+
+    if (prices.length === 0) {
+      return null;
+    }
+
+    return (
+      prices.reduce(
+        (sum, price) =>
+          sum + price,
+        0
+      ) / prices.length
+    );
+
+  }, [producerListings]);
+
+  // =========================================================
+  // PENDING REQUESTS
+  // =========================================================
+
+  const pendingRequests =
+    requests.filter(
+      (request) =>
+        request.status === "Pending"
+    );
+
+  // =========================================================
+  // TOTAL REQUESTED ENERGY
+  // =========================================================
+
+  const totalRequestedEnergy =
+    pendingRequests.reduce(
+      (sum, request) =>
+        sum +
+        Number(
+          request.energy || 0
+        ),
+      0
+    );
+
+  // =========================================================
+  // MARKET DATA
+  // =========================================================
+
+  const marketSummary =
+    market?.market_summary || {};
+
+  const marketPrice =
+    Number(
+      marketSummary.average_price
+    );
+
+  const lowestMarketPrice =
+    Number(
+      marketSummary.lowest_price
+    );
+
+  const highestMarketPrice =
+    Number(
+      marketSummary.highest_price
+    );
+
+  const marketEnergy =
+    Number(
+      marketSummary.total_energy_available
+    );
+
+  const activeListings =
+    Number(
+      marketSummary.active_listings
+    );
+
+  // =========================================================
+  // BATTERY DATA
+  // =========================================================
+
+  const batterySoc =
+    Number(
+      battery?.soc || 0
+    );
+
+  const availableEnergy =
+    Number(
+      battery?.available_energy_kwh || 0
+    );
+
+  const batteryCapacity =
+    Number(
+      battery?.capacity_kwh || 0
+    );
+
+  const pvPower =
+    Number(
+      battery?.pv_power || 0
+    );
+
+  const batteryState =
+    battery?.state ||
+    "Unknown";
+
+  const batteryHealth =
+    battery?.health ||
+    "Unknown";
+
+  const recommendedRequest =
+    insights?.request_priority?.recommended_request || null;
+
+  const nowRecommendation =
+    insights?.what_to_do_now || null;
+
+  // =========================================================
+  // ENERGY AFTER ALL PENDING REQUESTS
+  // =========================================================
+
+  const remainingAfterRequests =
+    availableEnergy -
+    totalRequestedEnergy;
+
+  // =========================================================
+  // AUTOMATIC BRIEFING
+  // =========================================================
+
+  const createBriefingText = () => {
+
+    if (loading) {
+
+      return `
+I'm checking your latest energy information.
+
+Give me a moment while I collect your battery, trading and market data.
+`;
+    }
+
+    if (error) {
+
+      return `
+I couldn't load all of your live energy information right now.
+
+${error}
+
+Please check that the backend is running and try again.
+`;
+    }
+
+    const requestNames =
+      pendingRequests.length > 0
+        ? pendingRequests
+            .map(
+              (request) =>
+                request.consumer
+            )
+            .join(", ")
+        : "no pending requests";
+
+    let remainingMessage = "";
+
+    if (
+      remainingAfterRequests < 0
+    ) {
+
+      remainingMessage = `
+Your pending requests add up to ${totalRequestedEnergy.toFixed(
+        2
+      )} kWh, which is more than your currently available ${availableEnergy.toFixed(
+        2
+      )} kWh. So you should not accept all of them at once.
+`;
+
+    } else {
+
+      remainingMessage = `
+If you supplied all the currently pending requests, you'd have about ${remainingAfterRequests.toFixed(
+        2
+      )} kWh left.
+`;
+    }
+
+    let marketMessage = "";
+
+    if (
+      Number.isFinite(
+        marketPrice
+      ) &&
+      marketPrice > 0
+    ) {
+
+      marketMessage = `
+The current market is averaging around ₹${marketPrice.toFixed(
+        2
+      )} per kWh. Prices currently range from ₹${lowestMarketPrice.toFixed(
+        2
+      )} to ₹${highestMarketPrice.toFixed(
+        2
+      )} per kWh.
+`;
+
+    } else {
+
+      marketMessage = `
+There isn't enough active market data right now to calculate a reliable average price.
+`;
+    }
+
+    let producerPriceMessage = "";
+
+    if (
+      Number.isFinite(
+        producerPrice
+      )
+    ) {
+
+      producerPriceMessage = `
+Your active listings are currently averaging around ₹${producerPrice.toFixed(
+        2
+      )} per kWh.
+`;
+
+    } else {
+
+      producerPriceMessage = `
+You don't currently have an active energy listing.
+`;
+    }
+
+    return `
+Hello ${username}.
+
+Here is your latest energy update.
+
+Your battery is at ${batterySoc.toFixed(
+      1
+    )} percent, with about ${availableEnergy.toFixed(
+      2
+    )} kWh available out of ${batteryCapacity.toFixed(
+      2
+    )} kWh.
+
+The battery is currently ${String(
+      batteryState
+    ).toLowerCase()}, and its health is ${String(
+      batteryHealth
+    ).toLowerCase()}.
+
+Your solar system is currently showing ${pvPower.toFixed(
+      2
+    )} watts of PV power.
+
+You have ${pendingRequests.length} pending buying request${
+      pendingRequests.length === 1
+        ? ""
+        : "s"
+    }.
+
+They are ${requestNames}.
+
+The pending requests together are asking for about ${totalRequestedEnergy.toFixed(
+      2
+    )} kWh.
+
+${remainingMessage}
+
+${marketMessage}
+
+${producerPriceMessage}
+
+There are currently ${activeListings} active market listing${
+      activeListings === 1
+        ? ""
+        : "s"
+    }, with about ${marketEnergy.toFixed(
+      2
+    )} kWh available in the market.
+
+I'll keep these numbers based on the live data available from your system.
+`;
+  };
+
+  // =========================================================
+  // BRIEFING TEXT
+  // =========================================================
+
+  const briefingText =
+    createBriefingText();
+
+  // =========================================================
+  // FIRST AI MESSAGE
+  // =========================================================
+
+  useEffect(() => {
+
+    if (loading) {
+      return;
+    }
+
+    const text =
+      createBriefingText();
+
+    setMessages([
+      {
+        id: Date.now(),
+        sender: "ai",
+        text,
+      }
+    ]);
+
+  }, [
+    loading,
+    error,
+    username,
+    batterySoc,
+    availableEnergy,
+    batteryCapacity,
+    batteryState,
+    batteryHealth,
+    pvPower,
+    pendingRequests.length,
+    totalRequestedEnergy,
+    remainingAfterRequests,
+    marketPrice,
+    lowestMarketPrice,
+    highestMarketPrice,
+    marketEnergy,
+    activeListings,
+    producerPrice
+  ]);
+
+  // =========================================================
+  // SPEAK
+  // =========================================================
+
+  const handleSpeak = (
+    text = briefingText
+  ) => {
+
+    window.speechSynthesis.cancel();
+
+    const speech =
+      new SpeechSynthesisUtterance(
+        text
+      );
+
+    speech.rate = 0.9;
+    speech.pitch = 1;
+    speech.volume = 1;
+
+    speech.onstart = () => {
+      setIsSpeaking(true);
+    };
+
+    speech.onend = () => {
+      setIsSpeaking(false);
+    };
+
+    speech.onerror = () => {
+      setIsSpeaking(false);
+    };
+
+    window.speechSynthesis.speak(
+      speech
+    );
+  };
+
+  // =========================================================
+  // STOP SPEAKING
+  // =========================================================
+
+  const handleStop = () => {
+
+    window.speechSynthesis.cancel();
+
+    setIsSpeaking(false);
+  };
+
+  // =========================================================
+  // CLOSE BRIEFING
+  // =========================================================
+
+  const handleCloseBriefing = () => {
+
+    window.speechSynthesis.cancel();
+
+    setIsSpeaking(false);
+
+    setShowBriefing(false);
+  };
+
+  // =========================================================
+  // FIND SPECIFIC BUYER
+  // =========================================================
+
+  const findBuyer = (question) => {
+
+    return pendingRequests.find(
+      (request) =>
+        question.includes(
+          String(
+            request.consumer
+          ).toLowerCase()
+        )
+    );
+  };
+
+  // =========================================================
+  // NATURAL LANGUAGE NEGOTIATION
+  // =========================================================
+
+  const isNegotiationMessage = (question) => {
+
+    const q = question
+      .toLowerCase()
+      .trim();
+
+    const negotiationWords = [
+      "negotiate",
+      "negotiation",
+      "bargain",
+      "counter offer",
+      "counteroffer",
+      "make an offer",
+      "make offer",
+      "offer",
+      "deal"
+    ];
+
+    return negotiationWords.some(
+      (word) => q.includes(word)
+    );
+  };
+
+  // ---------------------------------------------------------
+  // EXTRACT ENERGY FROM NATURAL LANGUAGE
+  // ---------------------------------------------------------
+
+  const extractNegotiationEnergy = (question) => {
+
+    const patterns = [
+      /(\d+(?:\.\d+)?)\s*kwh\b/i,
+      /(\d+(?:\.\d+)?)\s*kw\s*h\b/i,
+      /(\d+(?:\.\d+)?)\s*units?\b/i
+    ];
+
+    for (const pattern of patterns) {
+
+      const match = question.match(pattern);
+
+      if (match) {
+        const value = Number(match[1]);
+
+        if (Number.isFinite(value) && value > 0) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // ---------------------------------------------------------
+  // EXTRACT OFFER FROM NATURAL LANGUAGE
+  // ---------------------------------------------------------
+
+  const extractNegotiationOffer = (question) => {
+
+    const patterns = [
+      /₹\s*(\d+(?:\.\d+)?)/i,
+      /(?:rs\.?|rupees?)\s*(\d+(?:\.\d+)?)/i,
+      /(?:pay|offer|at|for)\s*₹?\s*(\d+(?:\.\d+)?)/i
+    ];
+
+    for (const pattern of patterns) {
+
+      const match = question.match(pattern);
+
+      if (match) {
+        const value = Number(match[1]);
+
+        if (Number.isFinite(value) && value >= 0) {
+          return value;
+        }
+      }
+    }
+
+    return null;
+  };
+
+  // ---------------------------------------------------------
+  // FIND THE REAL PENDING CONSUMER
+  // ---------------------------------------------------------
+
+  const findNegotiationConsumer = (question) => {
+
+    const q = question.toLowerCase();
+
+    return pendingRequests.find((request) => {
+
+      const consumer = String(
+        request.consumer || ""
+      ).toLowerCase();
+
+      return consumer && q.includes(consumer);
+    });
+  };
+
+  // ---------------------------------------------------------
+  // FIND A REAL PRODUCER LISTING
+  // ---------------------------------------------------------
+
+  const findNegotiationListing = (requestedEnergy) => {
+
+    const candidates = producerListings.filter(
+      (listing) => {
+
+        const energy = Number(listing.energy);
+        const price = Number(listing.price);
+
+        return (
+          Number.isFinite(energy) &&
+          energy > 0 &&
+          Number.isFinite(price) &&
+          price >= 0 &&
+          energy >= requestedEnergy
+        );
+      }
+    );
+
+    if (candidates.length === 0) {
+      return null;
+    }
+
+    return [...candidates].sort(
+      (a, b) => Number(a.price) - Number(b.price)
+    )[0];
+  };
+
+  // ---------------------------------------------------------
+  // RUN REAL NEGOTIATION
+  // ---------------------------------------------------------
+
+  const runNaturalLanguageNegotiation = async (question) => {
+
+    const energy = extractNegotiationEnergy(question);
+    const offer = extractNegotiationOffer(question);
+    const consumerRequest = findNegotiationConsumer(question);
+
+    if (energy === null) {
+      return `
+I can negotiate the energy price for you.
+
+How much energy should I negotiate? Please include the amount in kWh.
+
+For example:
+
+"Negotiate 5 kWh with gokul at ₹18 per kWh."
+`;
+    }
+
+    if (offer === null) {
+      return `
+I understand that you want to negotiate ${energy.toFixed(2)} kWh.
+
+What price should I offer per kWh?
+
+For example:
+
+"Offer ₹18 per kWh."
+`;
+    }
+
+    if (pendingRequests.length === 0) {
+      return `
+I don't have any pending buyer request to negotiate against right now.
+
+I won't invent a consumer or a transaction. A real pending buyer request is required for this producer-side negotiation.
+`;
+    }
+
+    if (!consumerRequest) {
+      const names = pendingRequests
+        .map((request) => request.consumer)
+        .filter(Boolean)
+        .join(", ");
+
+      return `
+I understand the request: ${energy.toFixed(2)} kWh at ₹${offer.toFixed(2)} per kWh.
+
+Which pending buyer should I negotiate with?
+
+Current pending buyers: ${names || "none"}
+
+You can say, for example:
+"Negotiate ${energy.toFixed(2)} kWh with ${names || "the buyer"} at ₹${offer.toFixed(2)} per kWh."
+`;
+    }
+
+    const listing = findNegotiationListing(energy);
+
+    if (!listing) {
+      return `
+I couldn't find one of your active listings with at least ${energy.toFixed(2)} kWh available.
+
+I won't invent a listing or available energy amount.
+`;
+    }
+
+    try {
+
+      setIsNegotiating(true);
+
+      const response = await fetch(
+        `${API}/trading/negotiate`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            listing_id: listing.id,
+            producer: username,
+            consumer: consumerRequest.consumer,
+            energy,
+            producer_price: Number(listing.price),
+            consumer_offer: offer
+          })
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.detail ||
+          "The negotiation request was rejected by the backend."
+        );
+      }
+
+      await loadAssistantData();
+
+      if (data.status === "Accepted") {
+        return `
+Negotiation accepted.
+
+Buyer: ${data.consumer}
+Energy: ${Number(data.energy).toFixed(2)} kWh
+Producer asking price: ₹${Number(data.producer_price).toFixed(2)} per kWh
+Buyer offer: ₹${Number(data.consumer_offer).toFixed(2)} per kWh
+Agreed price: ₹${Number(data.negotiated_price).toFixed(2)} per kWh
+
+The negotiation agent accepted the offer because it meets or exceeds the producer's asking price.
+`;
+      }
+
+      if (data.status === "Counter Offer") {
+        return `
+Counter-offer generated.
+
+Buyer: ${data.consumer}
+Energy: ${Number(data.energy).toFixed(2)} kWh
+Producer asking price: ₹${Number(data.producer_price).toFixed(2)} per kWh
+Buyer offer: ₹${Number(data.consumer_offer).toFixed(2)} per kWh
+Counter-offer: ₹${Number(data.negotiated_price).toFixed(2)} per kWh
+
+The negotiation agent compared the real listing price, the buyer's offer and the current market conditions.
+`;
+      }
+
+      return `
+Negotiation result: ${data.status}.
+
+Buyer: ${data.consumer}
+Energy: ${Number(data.energy).toFixed(2)} kWh
+Buyer offer: ₹${Number(data.consumer_offer).toFixed(2)} per kWh
+
+No fabricated price or transaction was created.
+`;
+
+    } catch (err) {
+
+      console.error(
+        "Natural language negotiation error:",
+        err
+      );
+
+      return `
+I couldn't complete the negotiation.
+
+${err.message}
+`;
+
+    } finally {
+      setIsNegotiating(false);
+    }
+  };
+
+  // =========================================================
+  // LOCAL ENERGY ANSWER
+  //
+  // No fake project data.
+  // Every number comes from backend state.
+  // =========================================================
+
+  const generateResponse = (
+    question
+  ) => {
+
+    const q =
+      question
+        .toLowerCase()
+        .trim();
+
+    // -------------------------------------------------------
+    // BATTERY
+    // -------------------------------------------------------
+
+    if (
+      q.includes("battery") ||
+      q.includes("soc") ||
+      q.includes("stored energy") ||
+      q.includes("available energy") ||
+      q.includes("capacity")
+    ) {
+
+      return `
+Your battery is currently at ${batterySoc.toFixed(
+        1
+      )}%.
+
+You have about ${availableEnergy.toFixed(
+        2
+      )} kWh available out of ${batteryCapacity.toFixed(
+        2
+      )} kWh.
+
+It is currently ${String(
+        batteryState
+      ).toLowerCase()}, and the battery health is ${String(
+        batteryHealth
+      ).toLowerCase()}.
+`;
+    }
+
+    // -------------------------------------------------------
+    // SOLAR / PV
+    // -------------------------------------------------------
+
+    if (
+      q.includes("solar") ||
+      q.includes("pv") ||
+      q.includes("generation") ||
+      q.includes("producing")
+    ) {
+
+      return `
+Your latest battery-system reading shows ${pvPower.toFixed(
+        2
+      )} watts of PV power.
+
+I won't invent a solar percentage. A percentage needs a defined expected-generation reference, so I'll only show the actual PV reading available from your backend.
+`;
+    }
+
+    // -------------------------------------------------------
+    // BUYING REQUESTS
+    // -------------------------------------------------------
+
+    if (
+      q.includes("request") ||
+      q.includes("buyer") ||
+      q.includes("buyers") ||
+      q.includes("consumer")
+    ) {
+
+      if (
+        pendingRequests.length === 0
+      ) {
+
+        return `
+You currently don't have any pending buying requests.
+`;
+      }
+
+      const details =
+        pendingRequests
+          .map(
+            (request) =>
+              `${request.consumer} is requesting ${Number(
+                request.energy || 0
+              ).toFixed(
+                2
+              )} kWh.`
+          )
+          .join(" ");
+
+      return `
+You currently have ${pendingRequests.length} pending buying requests.
+
+${details}
+
+Together, they are requesting about ${totalRequestedEnergy.toFixed(
+        2
+      )} kWh.
+`;
+    }
+
+    // -------------------------------------------------------
+    // SPECIFIC BUYER
+    // -------------------------------------------------------
+
+    const buyer =
+      findBuyer(q);
+
+    if (buyer) {
+
+      return `
+${buyer.consumer} has a pending request for ${Number(
+        buyer.energy || 0
+      ).toFixed(
+        2
+      )} kWh.
+
+The request status is ${buyer.status}.
+`;
+    }
+
+    // -------------------------------------------------------
+    // MARKET
+    // -------------------------------------------------------
+
+    if (
+      q.includes("market") ||
+      q.includes("price") ||
+      q.includes("selling price")
+    ) {
+
+      if (
+        !Number.isFinite(
+          marketPrice
+        ) ||
+        marketPrice <= 0
+      ) {
+
+        return `
+There isn't enough active market data right now to calculate a reliable market price.
+`;
+      }
+
+      let yourPriceText =
+        "You don't currently have an active listing.";
+
+      if (
+        Number.isFinite(
+          producerPrice
+        )
+      ) {
+
+        yourPriceText =
+          `Your active listings average around ₹${producerPrice.toFixed(
+            2
+          )} per kWh.`;
+      }
+
+      return `
+The current market average is around ₹${marketPrice.toFixed(
+        2
+      )} per kWh.
+
+The current market range is ₹${lowestMarketPrice.toFixed(
+        2
+      )} to ₹${highestMarketPrice.toFixed(
+        2
+      )} per kWh.
+
+${yourPriceText}
+`;
+    }
+
+    // -------------------------------------------------------
+    // SELLING
+    // -------------------------------------------------------
+
+    if (
+      q.includes("sell") ||
+      q.includes("selling")
+    ) {
+
+      if (
+        availableEnergy <= 0
+      ) {
+
+        return `
+You currently have no available battery energy according to the latest battery reading.
+
+I would not recommend planning another energy sale until the available energy changes.
+`;
+      }
+
+      return `
+You currently have about ${availableEnergy.toFixed(
+        2
+      )} kWh available.
+
+There are ${pendingRequests.length} pending requests asking for a combined ${totalRequestedEnergy.toFixed(
+        2
+      )} kWh.
+
+If all pending requests were supplied, the calculated balance would be ${remainingAfterRequests.toFixed(
+        2
+      )} kWh.
+
+So I would review the requests and battery level before deciding how much to sell.
+`;
+    }
+
+    // -------------------------------------------------------
+    // REMAINING ENERGY
+    // -------------------------------------------------------
+
+    if (
+      q.includes("remaining") ||
+      q.includes("left") ||
+      q.includes("after")
+    ) {
+
+      return `
+You currently have about ${availableEnergy.toFixed(
+        2
+      )} kWh available.
+
+Your pending requests total about ${totalRequestedEnergy.toFixed(
+        2
+      )} kWh.
+
+If all of them were supplied, the calculated remaining amount would be ${remainingAfterRequests.toFixed(
+        2
+      )} kWh.
+`;
+    }
+
+    // -------------------------------------------------------
+    // PRIORITY
+    // -------------------------------------------------------
+
+    if (
+      q.includes("priority") ||
+      q.includes("first") ||
+      q.includes("who should")
+    ) {
+
+      if (
+        pendingRequests.length === 0
+      ) {
+
+        return `
+There are currently no pending requests to prioritize.
+`;
+      }
+
+      const ranked =
+        [...pendingRequests]
+          .sort(
+            (a, b) =>
+              Number(
+                b.energy || 0
+              ) -
+              Number(
+                a.energy || 0
+              )
+          );
+
+      return `
+You currently have ${pendingRequests.length} pending requests.
+
+Based only on the current request data, the largest energy request is from ${ranked[0].consumer}, asking for ${Number(
+        ranked[0].energy || 0
+      ).toFixed(
+        2
+      )} kWh.
+
+However, energy amount alone should not be treated as the final priority. A proper priority agent should also consider urgency, purpose, battery availability and other project rules.
+`;
+    }
+
+    // -------------------------------------------------------
+    // HOW MUCH CAN I SELL?
+    // -------------------------------------------------------
+
+    if (
+      q.includes("how much") &&
+      (
+        q.includes("sell") ||
+        q.includes("energy")
+      )
+    ) {
+
+      return `
+You currently have about ${availableEnergy.toFixed(
+        2
+      )} kWh available.
+
+Your pending requests require about ${totalRequestedEnergy.toFixed(
+        2
+      )} kWh.
+
+I would review the requests before deciding the final amount to sell.
+`;
+    }
+
+    // -------------------------------------------------------
+    // MARKET SELLER
+    // -------------------------------------------------------
+
+    if (
+      q.includes("who is selling") ||
+      q.includes("cheapest") ||
+      q.includes("lowest seller") ||
+      q.includes("seller")
+    ) {
+
+      const marketListings =
+        Array.isArray(
+          market?.listings
+        )
+          ? market.listings
+          : [];
+
+      if (
+        marketListings.length === 0
+      ) {
+
+        return `
+There are currently no other active producer listings available in the market data.
+`;
+      }
+
+      const sorted =
+        [...marketListings].sort(
+          (a, b) =>
+            Number(a.price || 0) -
+            Number(b.price || 0)
+        );
+
+      const cheapest =
+        sorted[0];
+
+      return `
+The lowest-priced active producer currently in the market is ${cheapest.producer}, offering energy at ₹${Number(
+        cheapest.price || 0
+      ).toFixed(
+        2
+      )} per kWh.
+
+That listing currently has about ${Number(
+        cheapest.energy || 0
+      ).toFixed(
+        2
+      )} kWh available.
+`;
+    }
+
+    // -------------------------------------------------------
+    // GREETING
+    // -------------------------------------------------------
+
+    if (
+      q === "hi" ||
+      q === "hello" ||
+      q === "hey"
+    ) {
+
+      return `
+Hi ${username}.
+
+I'm your energy assistant.
+
+I can check your live battery, PV power, buying requests, market prices and active listings.
+`;
+    }
+
+    // -------------------------------------------------------
+    // REFRESH
+    // -------------------------------------------------------
+
+    if (
+      q.includes("refresh") ||
+      q.includes("update data") ||
+      q.includes("latest data")
+    ) {
+
+      loadAssistantData();
+
+      return `
+I'm refreshing the latest battery, trading and market information now.
+`;
+    }
+
+    // -------------------------------------------------------
+    // FALLBACK
+    // -------------------------------------------------------
+
+    return `
+I can answer questions using the live data currently available from your energy system.
+
+Try asking:
+
+• How much battery energy do I have?
+• Who is asking to buy?
+• How much energy are they requesting?
+• What's the current market price?
+• Who is selling at the lowest price?
+• How much energy will remain after the requests?
+• How much PV power are we producing?
+• Should I sell now?
+• Who should I prioritize?
+`;
+  };
+
+  // =========================================================
+  // SEND MESSAGE
+  // =========================================================
+
+  const handleSend = async () => {
+
+    const question = input.trim();
+
+    if (!question || isNegotiating) {
+      return;
+    }
+
+    const userMessage = {
+      id: Date.now(),
+      sender: "user",
+      text: question
+    };
+
+    setMessages((previous) => [
+      ...previous,
+      userMessage
+    ]);
+
+    setInput("");
+
+    let answer;
+
+    if (isNegotiationMessage(question)) {
+      answer = await runNaturalLanguageNegotiation(question);
+    } else {
+      answer = generateResponse(question);
+    }
+
+    setMessages((previous) => [
+      ...previous,
+      {
+        id: Date.now() + 1,
+        sender: "ai",
+        text: answer
+      }
+    ]);
+  };
+
+  // =========================================================
+  // ENTER KEY
+  // =========================================================
+
+  const handleKeyDown = (
+    event
+  ) => {
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+
+      event.preventDefault();
+
+      handleSend();
+    }
+  };
+
+  // =========================================================
+  // FORMAT MESSAGE
+  // =========================================================
+
+  const formatMessage = (
+    text
+  ) => {
+
+    return text
+      .split("\n")
+      .filter(
+        (line) =>
+          line.trim() !== ""
+      )
+      .map(
+        (line, index) => (
+          <p key={index}>
+            {line}
+          </p>
+        )
+      );
+  };
 
   // =========================================================
   // UI
   // =========================================================
 
   return (
-    <div
-      style={{
-        width: "100%",
-        maxWidth: "500px",
-        padding: "22px",
-        borderRadius: "20px",
-        background: "#f8fafc",
-        border: "1px solid #e2e8f0",
-        boxShadow:
-          "0 8px 30px rgba(0,0,0,0.08)",
-        boxSizing: "border-box"
-      }}
-    >
+    <>
+      <style>{`
 
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+        * {
+          box-sizing: border-box;
+        }
 
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "14px",
-          marginBottom: "20px"
-        }}
-      >
+        .ai-section {
+          width: 100%;
+          min-height: 620px;
 
-        {/* Robot */}
-
-        <div
-          style={{
-            width: "58px",
-            height: "58px",
-            borderRadius: "50%",
-            background: "#dbeafe",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "30px",
-            flexShrink: 0
-          }}
-        >
-          🤖
-        </div>
-
-
-        {/* Title */}
-
-        <div>
-
-          <h2
-            style={{
-              margin: 0,
-              fontSize: "20px",
-              color: "#111827"
-            }}
-          >
-            Energy AI Assistant
-          </h2>
-
-          <p
-            style={{
-              margin: "5px 0 0",
-              fontSize: "13px",
-              color: "#6b7280"
-            }}
-          >
-            Live market intelligence
-          </p>
-
-        </div>
-
-      </div>
-
-
-      {/* =====================================================
-          USER
-      ===================================================== */}
-
-      {username && (
-
-        <div
-          style={{
-            marginBottom: "16px",
-            fontSize: "13px",
-            color: "#4b5563"
-          }}
-        >
-          👋 Hello, <strong>{username}</strong>
-        </div>
-
-      )}
-
-
-      {/* =====================================================
-          MARKET CARDS
-      ===================================================== */}
-
-      {market && (
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns:
-              "repeat(2, minmax(0, 1fr))",
-            gap: "10px",
-            marginBottom: "18px"
-          }}
-        >
-
-          <InfoCard
-            title="IEX Market Price"
-            value={
-              `₹${market.mcp_rs_kwh}/kWh`
-            }
-          />
-
-          <InfoCard
-            title="Cleared Volume"
-            value={
-              `${market.mcv_mw} MW`
-            }
-          />
-
-          <InfoCard
-            title="Purchase Bid"
-            value={
-              `${market.purchase_bid_mw} MW`
-            }
-          />
-
-          <InfoCard
-            title="Sell Bid"
-            value={
-              `${market.sell_bid_mw} MW`
-            }
-          />
-
-        </div>
-
-      )}
-
-
-      {/* =====================================================
-          PRODUCER MARKET SUMMARY
-      ===================================================== */}
-
-      {producerMarket?.market_summary && (
-
-        <div
-          style={{
-            padding: "14px",
-            marginBottom: "18px",
-            borderRadius: "14px",
-            background: "#ffffff",
-            border: "1px solid #e5e7eb"
-          }}
-        >
-
-          <div
-            style={{
-              fontSize: "13px",
-              fontWeight: "700",
-              marginBottom: "10px",
-              color: "#111827"
-            }}
-          >
-            📊 Producer Market
-          </div>
-
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns:
-                "repeat(2, 1fr)",
-              gap: "8px"
-            }}
-          >
-
-            <SmallStat
-              label="Lowest Price"
-              value={
-                `₹${producerMarket.market_summary.lowest_price}`
-              }
-            />
-
-            <SmallStat
-              label="Highest Price"
-              value={
-                `₹${producerMarket.market_summary.highest_price}`
-              }
-            />
-
-            <SmallStat
-              label="Average Price"
-              value={
-                `₹${producerMarket.market_summary.average_price}`
-              }
-            />
-
-            <SmallStat
-              label="Energy Available"
-              value={
-                `${producerMarket.market_summary.total_energy_available} kWh`
-              }
-            />
-
-          </div>
-
-        </div>
-
-      )}
-
-
-      {/* =====================================================
-          AI INSIGHT
-      ===================================================== */}
-
-      <div
-        style={{
-          padding: "16px",
-          borderRadius: "15px",
-          background: "#ffffff",
-          border: "1px solid #e5e7eb",
-          marginBottom: "16px"
-        }}
-      >
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "8px",
-            marginBottom: "8px"
-          }}
-        >
-
-          <span
-            style={{
-              fontSize: "18px"
-            }}
-          >
-            💡
-          </span>
-
-          <strong
-            style={{
-              color: "#111827"
-            }}
-          >
-            AI Insight
-          </strong>
-
-        </div>
-
-
-        <p
-          style={{
-            margin: 0,
-            fontSize: "13px",
-            lineHeight: "1.7",
-            color: "#4b5563"
-          }}
-        >
-          {loading
-            ? "Analyzing the latest energy market..."
-            : insight}
-        </p>
-
-      </div>
-
-
-      {/* =====================================================
-          ERROR
-      ===================================================== */}
-
-      {error && (
-
-        <div
-          style={{
-            marginBottom: "14px",
-            padding: "10px",
-            borderRadius: "10px",
-            background: "#fef2f2",
-            color: "#b91c1c",
-            fontSize: "12px"
-          }}
-        >
-          {error}
-        </div>
-
-      )}
-
-
-      {/* =====================================================
-          REFRESH BUTTON
-      ===================================================== */}
-
-      <button
-        onClick={loadAssistantData}
-        disabled={loading}
-        style={{
-          width: "100%",
-          padding: "11px",
-          border: "none",
-          borderRadius: "10px",
           background:
-            loading
-              ? "#93c5fd"
-              : "#2563eb",
-          color: "#ffffff",
-          fontWeight: "600",
+            radial-gradient(
+              circle at 20% 0%,
+              rgba(67, 213, 230, 0.08),
+              transparent 35%
+            ),
+            #0d1828;
+
+          border:
+            1px solid rgba(255,255,255,0.08);
+
+          border-radius: 18px;
+
+          overflow: hidden;
+
+          color: #edf1f7;
+
+          font-family:
+            Inter,
+            sans-serif;
+
+          display: flex;
+          flex-direction: column;
+        }
+
+        .ai-chat-header {
+          height: 70px;
+
+          padding:
+            14px 20px;
+
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+
+          border-bottom:
+            1px solid rgba(
+              255,
+              255,
+              255,
+              0.07
+            );
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.015
+            );
+        }
+
+        .ai-brand {
+          display: flex;
+          align-items: center;
+          gap: 11px;
+        }
+
+        .ai-logo {
+          width: 40px;
+          height: 40px;
+
+          border-radius: 50%;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          background:
+            linear-gradient(
+              135deg,
+              #45d7e8,
+              #8d6cf0
+            );
+
+          color: white;
+
+          font-size: 19px;
+
+          box-shadow:
+            0 0 25px
+            rgba(
+              69,
+              215,
+              232,
+              0.18
+            );
+        }
+
+        .ai-name {
+          font-size: 15px;
+          font-weight: 700;
+        }
+
+        .ai-status {
+          color: #6f8199;
+          font-size: 10px;
+          margin-top: 3px;
+        }
+
+        .ai-online {
+          display: inline-block;
+
+          width: 6px;
+          height: 6px;
+
+          border-radius: 50%;
+
+          background: #5fd98a;
+
+          margin-right: 5px;
+        }
+
+        .ai-chat-body {
+          flex: 1;
+
+          padding:
+            25px 22px;
+
+          overflow-y: auto;
+
+          display: flex;
+          flex-direction: column;
+
+          gap: 18px;
+        }
+
+        .ai-welcome {
+          text-align: center;
+
+          padding:
+            20px 10px 8px;
+        }
+
+        .ai-welcome-icon {
+          font-size: 28px;
+          margin-bottom: 8px;
+        }
+
+        .ai-welcome-title {
+          font-size: 17px;
+          font-weight: 700;
+        }
+
+        .ai-welcome-text {
+          color: #7d8da4;
+          font-size: 12px;
+          margin-top: 5px;
+        }
+
+        .message-row {
+          display: flex;
+          gap: 10px;
+          width: 100%;
+        }
+
+        .message-row.user {
+          justify-content: flex-end;
+        }
+
+        .message-avatar {
+          flex-shrink: 0;
+
+          width: 30px;
+          height: 30px;
+
+          border-radius: 50%;
+
+          display: flex;
+          align-items: center;
+          justify-content: center;
+
+          background: #17283e;
+
+          font-size: 13px;
+        }
+
+        .message-content {
+          max-width: 78%;
+        }
+
+        .message-bubble {
+          padding:
+            13px 15px;
+
+          border-radius: 14px;
+
+          font-size: 13px;
+
+          line-height: 1.65;
+        }
+
+        .message-bubble p {
+          margin:
+            0 0 9px;
+        }
+
+        .message-bubble p:last-child {
+          margin-bottom: 0;
+        }
+
+        .ai-message-bubble {
+          background: #142337;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.06
+            );
+
+          color: #dce5ef;
+
+          border-top-left-radius: 4px;
+        }
+
+        .user-message-bubble {
+          background:
+            linear-gradient(
+              135deg,
+              #245066,
+              #39406c
+            );
+
+          color: white;
+
+          border-top-right-radius: 4px;
+        }
+
+        .message-time {
+          color: #64758b;
+
+          font-size: 9px;
+
+          margin-top: 5px;
+        }
+
+        .user .message-time {
+          text-align: right;
+        }
+
+        .briefing-actions {
+          display: flex;
+
+          gap: 8px;
+
+          margin-top: 12px;
+
+          flex-wrap: wrap;
+        }
+
+        .briefing-button {
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.08
+            );
+
+          background: #17283c;
+
+          color: #9cabbf;
+
+          padding:
+            8px 12px;
+
+          border-radius: 8px;
+
+          font-size: 10px;
+
+          font-weight: 600;
+
+          cursor: pointer;
+        }
+
+        .briefing-button:hover {
+          background: #20344d;
+          color: white;
+        }
+
+        .briefing-button.speak {
+          color: #55d9e5;
+        }
+
+        .ai-input-area {
+          padding:
+            15px 18px 18px;
+
+          border-top:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.07
+            );
+
+          background:
+            rgba(
+              8,
+              15,
+              25,
+              0.5
+            );
+        }
+
+        .ai-input-box {
+          display: flex;
+          align-items: flex-end;
+
+          gap: 8px;
+
+          background: #142236;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.08
+            );
+
+          border-radius: 13px;
+
+          padding: 7px;
+        }
+
+        .ai-input {
+          flex: 1;
+
+          min-height: 40px;
+          max-height: 100px;
+
+          resize: none;
+
+          border: none;
+          outline: none;
+
+          background: transparent;
+
+          color: #edf1f7;
+
+          font-family:
+            Inter,
+            sans-serif;
+
+          font-size: 12px;
+
+          padding: 10px;
+        }
+
+        .ai-input::placeholder {
+          color: #61738a;
+        }
+
+        .send-button {
+          width: 38px;
+          height: 38px;
+
+          border: none;
+
+          border-radius: 9px;
+
+          background:
+            linear-gradient(
+              135deg,
+              #45d7e8,
+              #8d6cf0
+            );
+
+          color: white;
+
+          cursor: pointer;
+
+          font-size: 15px;
+        }
+
+        .send-button:hover {
+          transform:
+            translateY(-1px);
+        }
+
+        .send-button:disabled {
+          opacity: 0.35;
+
           cursor:
-            loading
-              ? "not-allowed"
-              : "pointer"
-        }}
-      >
+            not-allowed;
 
-        {loading
-          ? "Analyzing..."
-          : "🔄 Refresh Insight"}
+          transform: none;
+        }
 
-      </button>
+        .input-hint {
+          color: #52647b;
 
-    </div>
-  );
-}
+          font-size: 9px;
 
+          margin-top: 7px;
 
-// ============================================================
-// INFO CARD
-// ============================================================
+          padding-left: 4px;
+        }
 
-function InfoCard({
-  title,
-  value
-}) {
+        .briefing-overlay {
+          position: fixed;
 
-  return (
-    <div
-      style={{
-        padding: "13px",
-        borderRadius: "12px",
-        background: "#ffffff",
-        border: "1px solid #e5e7eb"
-      }}
-    >
+          inset: 0;
 
-      <div
-        style={{
-          fontSize: "11px",
-          color: "#6b7280",
-          marginBottom: "5px"
-        }}
-      >
-        {title}
+          background:
+            rgba(
+              0,
+              0,
+              0,
+              0.58
+            );
+
+          backdrop-filter:
+            blur(5px);
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
+          padding: 20px;
+
+          z-index: 9999;
+        }
+
+        .briefing-popup {
+          width:
+            min(
+              720px,
+              94vw
+            );
+
+          max-height: 85vh;
+
+          overflow-y: auto;
+
+          background: #101c2d;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.10
+            );
+
+          border-radius: 20px;
+
+          box-shadow:
+            0 30px 90px
+            rgba(
+              0,
+              0,
+              0,
+              0.60
+            );
+
+          animation:
+            popupIn
+            0.25s
+            ease-out;
+        }
+
+        @keyframes popupIn {
+
+          from {
+            opacity: 0;
+
+            transform:
+              translateY(15px)
+              scale(0.98);
+          }
+
+          to {
+            opacity: 1;
+
+            transform:
+              translateY(0)
+              scale(1);
+          }
+        }
+
+        .briefing-header {
+          padding:
+            18px 21px;
+
+          display: flex;
+
+          align-items: center;
+
+          justify-content:
+            space-between;
+
+          border-bottom:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.07
+            );
+        }
+
+        .briefing-title {
+          display: flex;
+
+          align-items: center;
+
+          gap: 10px;
+        }
+
+        .briefing-icon {
+          width: 38px;
+          height: 38px;
+
+          border-radius: 50%;
+
+          display: flex;
+
+          align-items: center;
+          justify-content: center;
+
+          background:
+            linear-gradient(
+              135deg,
+              #45d7e8,
+              #8d6cf0
+            );
+
+          font-size: 18px;
+        }
+
+        .briefing-title-text {
+          font-size: 15px;
+
+          font-weight: 700;
+        }
+
+        .briefing-subtitle {
+          color: #71839a;
+
+          font-size: 10px;
+
+          margin-top: 3px;
+        }
+
+        .close-button {
+          width: 33px;
+          height: 33px;
+
+          border: none;
+
+          border-radius: 50%;
+
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.06
+            );
+
+          color: #a1aec0;
+
+          font-size: 19px;
+
+          cursor: pointer;
+        }
+
+        .close-button:hover {
+          background:
+            rgba(
+              255,
+              255,
+              255,
+              0.12
+            );
+
+          color: white;
+        }
+
+        .briefing-content {
+          padding: 25px;
+        }
+
+        .briefing-greeting {
+          font-size: 21px;
+
+          font-weight: 700;
+
+          margin-bottom: 16px;
+        }
+
+        .briefing-text {
+          color: #dce5ef;
+
+          font-size: 13px;
+
+          line-height: 1.75;
+        }
+
+        .briefing-text p {
+          margin:
+            0 0 14px;
+        }
+
+        .briefing-cards {
+          display: grid;
+
+          grid-template-columns:
+            repeat(
+              2,
+              1fr
+            );
+
+          gap: 10px;
+
+          margin:
+            20px 0;
+        }
+
+        .briefing-card {
+          background: #162438;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.06
+            );
+
+          border-radius: 12px;
+
+          padding: 14px;
+        }
+
+        .briefing-card-label {
+          color: #75869c;
+
+          font-size: 9px;
+
+          text-transform:
+            uppercase;
+
+          letter-spacing:
+            0.08em;
+        }
+
+        .briefing-card-value {
+          font-size: 19px;
+
+          font-weight: 700;
+
+          margin-top: 6px;
+        }
+
+        .briefing-card-small {
+          color: #74859b;
+
+          font-size: 10px;
+
+          margin-top: 3px;
+        }
+
+        .request-list {
+          background: #162438;
+
+          border:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.06
+            );
+
+          border-radius: 12px;
+
+          overflow: hidden;
+
+          margin-top: 18px;
+        }
+
+        .request-heading {
+          padding:
+            13px 15px;
+
+          font-size: 11px;
+
+          font-weight: 700;
+
+          border-bottom:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.06
+            );
+        }
+
+        .request-item {
+          display: flex;
+
+          align-items: center;
+
+          justify-content:
+            space-between;
+
+          padding:
+            11px 15px;
+
+          border-bottom:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.05
+            );
+        }
+
+        .request-item:last-child {
+          border-bottom: none;
+        }
+
+        .request-name {
+          font-size: 12px;
+
+          font-weight: 600;
+        }
+
+        .request-purpose {
+          color: #72849b;
+
+          font-size: 10px;
+
+          margin-top: 2px;
+        }
+
+        .request-energy {
+          color: #55d9e5;
+
+          font-size: 11px;
+
+          font-weight: 700;
+        }
+
+        .briefing-footer {
+          display: flex;
+
+          justify-content:
+            flex-end;
+
+          gap: 8px;
+
+          padding:
+            15px 20px;
+
+          border-top:
+            1px solid
+            rgba(
+              255,
+              255,
+              255,
+              0.07
+            );
+        }
+
+        .voice-button {
+          border: none;
+
+          border-radius: 8px;
+
+          padding:
+            10px 15px;
+
+          background: #193c4c;
+
+          color: #55d9e5;
+
+          font-size: 11px;
+
+          font-weight: 700;
+
+          cursor: pointer;
+        }
+
+        .voice-button.stop {
+          background: #3c2931;
+
+          color: #ff9aaa;
+        }
+
+        @media(max-width:650px) {
+
+          .ai-section {
+            min-height: 550px;
+          }
+
+          .briefing-cards {
+            grid-template-columns:
+              1fr;
+          }
+
+          .briefing-content {
+            padding: 18px;
+          }
+
+          .message-content {
+            max-width: 88%;
+          }
+        }
+
+      `}</style>
+
+      {/* =====================================================
+          NORMAL CHAT
+      ===================================================== */}
+
+      <div className="ai-section">
+
+        <div className="ai-chat-header">
+
+          <div className="ai-brand">
+
+            <div
+              className="ai-logo"
+              style={{
+                animation:
+                  isSpeaking
+                    ? "aiPulse 1.2s infinite"
+                    : "none"
+              }}
+            >
+              ✦
+            </div>
+
+            <div>
+
+              <div className="ai-name">
+                Energy Assistant
+              </div>
+
+              <div className="ai-status">
+
+                <span className="ai-online"></span>
+
+                Your personal energy secretary
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="ai-chat-body">
+
+          {!showBriefing &&
+            messages.length === 1 && (
+              <div className="ai-welcome">
+
+                <div className="ai-welcome-icon">
+                  ✦
+                </div>
+
+                <div className="ai-welcome-title">
+                  How can I help you,{" "}
+                  {username}?
+                </div>
+
+                <div className="ai-welcome-text">
+                  Ask me anything about your
+                  energy system.
+                </div>
+
+              </div>
+            )}
+
+          {messages.map(
+            (message) => (
+
+              <div
+                key={message.id}
+                className={
+                  `message-row ${
+                    message.sender ===
+                    "user"
+                      ? "user"
+                      : ""
+                  }`
+                }
+              >
+
+                {message.sender ===
+                  "ai" && (
+                    <div className="message-avatar">
+                      ✦
+                    </div>
+                  )}
+
+                <div className="message-content">
+
+                  <div
+                    className={
+                      `message-bubble ${
+                        message.sender ===
+                        "ai"
+                          ? "ai-message-bubble"
+                          : "user-message-bubble"
+                      }`
+                    }
+                  >
+
+                    {formatMessage(
+                      message.text
+                    )}
+
+                    {message.sender ===
+                      "ai" && (
+                      <div className="briefing-actions">
+
+                        <button
+                          className="briefing-button speak"
+                          onClick={() =>
+                            handleSpeak(
+                              message.text
+                            )
+                          }
+                        >
+                          🔊 Speak
+                        </button>
+
+                        {isSpeaking && (
+                          <button
+                            className="briefing-button"
+                            onClick={
+                              handleStop
+                            }
+                          >
+                            ⏹ Stop
+                          </button>
+                        )}
+
+                      </div>
+                    )}
+
+                  </div>
+
+                  <div className="message-time">
+
+                    {message.sender ===
+                    "ai"
+                      ? "Energy Assistant"
+                      : "You"}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )
+          )}
+
+        </div>
+
+        <div className="ai-input-area">
+
+          <div className="ai-input-box">
+
+            <textarea
+              className="ai-input"
+              value={input}
+              onChange={(event) =>
+                setInput(
+                  event.target.value
+                )
+              }
+              onKeyDown={
+                handleKeyDown
+              }
+              placeholder="Ask anything about your energy..."
+              rows={1}
+            />
+
+            <button
+              className="send-button"
+              onClick={handleSend}
+              disabled={
+                !input.trim() ||
+                isNegotiating
+              }
+              title={
+                isNegotiating
+                  ? "Negotiating..."
+                  : "Send"
+              }
+            >
+              {isNegotiating ? "…" : "➤"}
+            </button>
+
+          </div>
+
+          <div className="input-hint">
+            {isNegotiating
+              ? "Negotiation agent is processing the live market data..."
+              : "Press Enter to send"}
+          </div>
+
+        </div>
+
       </div>
 
-      <div
-        style={{
-          fontSize: "15px",
-          fontWeight: "700",
-          color: "#111827"
-        }}
-      >
-        {value}
-      </div>
+      {/* =====================================================
+          AUTOMATIC BRIEFING POPUP
+      ===================================================== */}
 
-    </div>
-  );
-}
+      {showBriefing && (
 
+        <div className="briefing-overlay">
 
-// ============================================================
-// SMALL STAT
-// ============================================================
+          <div className="briefing-popup">
 
-function SmallStat({
-  label,
-  value
-}) {
+            <div className="briefing-header">
 
-  return (
-    <div>
+              <div className="briefing-title">
 
-      <div
-        style={{
-          fontSize: "10px",
-          color: "#6b7280"
-        }}
-      >
-        {label}
-      </div>
+                <div className="briefing-icon">
+                  ✦
+                </div>
 
-      <div
-        style={{
-          fontSize: "13px",
-          fontWeight: "600",
-          color: "#111827"
-        }}
-      >
-        {value}
-      </div>
+                <div>
 
-    </div>
+                  <div className="briefing-title-text">
+                    Energy Assistant
+                  </div>
+
+                  <div className="briefing-subtitle">
+                    Your personal energy secretary
+                  </div>
+
+                </div>
+
+              </div>
+
+              <button
+                className="close-button"
+                onClick={
+                  handleCloseBriefing
+                }
+                title="Close briefing"
+              >
+                ×
+              </button>
+
+            </div>
+
+            <div className="briefing-content">
+
+              <div className="briefing-greeting">
+
+                {loading
+                  ? "Checking your energy system..."
+                  : `Hello, ${username} 👋`}
+
+              </div>
+
+              {!loading &&
+                !error && (
+                  <>
+
+                    <div className="briefing-text">
+
+                      <p>
+                        Here is your latest
+                        energy update based
+                        on the information
+                        currently available
+                        from your system.
+                      </p>
+
+                    </div>
+
+                    <div className="briefing-cards">
+
+                      <div className="briefing-card">
+
+                        <div className="briefing-card-label">
+                          Battery
+                        </div>
+
+                        <div
+                          className="briefing-card-value"
+                          style={{
+                            color:
+                              "#55d9e5"
+                          }}
+                        >
+                          {batterySoc.toFixed(
+                            1
+                          )}
+                          %
+                        </div>
+
+                        <div className="briefing-card-small">
+                          {availableEnergy.toFixed(
+                            2
+                          )}{" "}
+                          kWh available
+                        </div>
+
+                      </div>
+
+                      <div className="briefing-card">
+
+                        <div className="briefing-card-label">
+                          PV Power
+                        </div>
+
+                        <div
+                          className="briefing-card-value"
+                          style={{
+                            color:
+                              "#ff9a72"
+                          }}
+                        >
+                          {pvPower.toFixed(
+                            2
+                          )}
+                        </div>
+
+                        <div className="briefing-card-small">
+                          watts
+                        </div>
+
+                      </div>
+
+                      <div className="briefing-card">
+
+                        <div className="briefing-card-label">
+                          Market Price
+                        </div>
+
+                        <div
+                          className="briefing-card-value"
+                          style={{
+                            color:
+                              "#b98cf2"
+                          }}
+                        >
+                          {Number.isFinite(
+                            marketPrice
+                          )
+                            ? `₹${marketPrice.toFixed(
+                                2
+                              )}`
+                            : "—"}
+                        </div>
+
+                        <div className="briefing-card-small">
+                          average per kWh
+                        </div>
+
+                      </div>
+
+                      <div className="briefing-card">
+
+                        <div className="briefing-card-label">
+                          Pending Requests
+                        </div>
+
+                        <div
+                          className="briefing-card-value"
+                          style={{
+                            color:
+                              "#5fd98a"
+                          }}
+                        >
+                          {
+                            pendingRequests.length
+                          }
+                        </div>
+
+                        <div className="briefing-card-small">
+                          {
+                            totalRequestedEnergy.toFixed(
+                              2
+                            )
+                          }{" "}
+                          kWh requested
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                    {insights && (
+                      <div
+                        style={{
+                          marginTop: 16,
+                          display: "grid",
+                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                          gap: 10,
+                        }}
+                      >
+                        <div className="briefing-card" style={{ gridColumn: "1 / -1", borderColor: "rgba(95,217,138,0.35)" }}>
+                          <div className="briefing-card-label">AI: What should I do now?</div>
+                          <div className="briefing-card-value" style={{ color: "#5fd98a", fontSize: 20 }}>
+                            {nowRecommendation?.action || "HOLD"}
+                          </div>
+                          <div className="briefing-card-small">Why? {nowRecommendation?.explanation || "Waiting for enough live insight data."}</div>
+                        </div>
+
+                        <div className="briefing-card">
+                          <div className="briefing-card-label">Recommended request</div>
+                          <div className="briefing-card-value" style={{ color: "#ffcf6e", fontSize: 16 }}>
+                            {recommendedRequest ? `${recommendedRequest.consumer} · ${recommendedRequest.score}/100` : "None"}
+                          </div>
+                          <div className="briefing-card-small">
+                            Why? {recommendedRequest?.explanation || "No pending requests to prioritize."}
+                          </div>
+                        </div>
+
+                        <div className="briefing-card">
+                          <div className="briefing-card-label">Suggested selling price</div>
+                          <div className="briefing-card-value" style={{ color: "#b98cf2", fontSize: 16 }}>
+                            ₹{Number(insights.selling_price?.suggested_price || 0).toFixed(2)}
+                          </div>
+                          <div className="briefing-card-small">
+                            Market: ₹{Number(insights.selling_price?.current_market_price || 0).toFixed(2)}/kWh · recommendation only
+                          </div>
+                        </div>
+
+                        <div className="briefing-card">
+                          <div className="briefing-card-label">Weather → solar → trading</div>
+                          <div className="briefing-card-value" style={{ color: "#55d9e5", fontSize: 16 }}>
+                            {insights.weather_trading?.action || "HOLD"}
+                          </div>
+                          <div className="briefing-card-small">
+                            Why? {insights.weather_trading?.explanation}
+                          </div>
+                        </div>
+
+                        <div className="briefing-card">
+                          <div className="briefing-card-label">Battery decision</div>
+                          <div className="briefing-card-value" style={{ color: "#ff9a72", fontSize: 16 }}>
+                            {insights.battery_decision?.action || "HOLD"}
+                          </div>
+                          <div className="briefing-card-small">
+                            Why? {insights.battery_decision?.explanation}
+                          </div>
+                        </div>
+
+                        <div className="briefing-card" style={{ gridColumn: "1 / -1" }}>
+                          <div className="briefing-card-label">Market price prediction</div>
+                          <div className="briefing-card-value" style={{ color: "#b98cf2", fontSize: 16 }}>
+                            ₹{Number(insights.market_prediction?.current_price || 0).toFixed(2)} → ₹{Number(insights.market_prediction?.predicted_price || 0).toFixed(2)} · {insights.market_prediction?.direction || "stable"}
+                          </div>
+                          <div className="briefing-card-small">
+                            {insights.market_prediction?.limited ? "Limited estimate. " : ""}Why? {insights.market_prediction?.explanation}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="briefing-text">
+
+                      <p>
+                        Your battery currently
+                        has{" "}
+                        <strong>
+                          {availableEnergy.toFixed(
+                            2
+                          )}{" "}
+                          kWh
+                        </strong>{" "}
+                        available out of{" "}
+                        <strong>
+                          {batteryCapacity.toFixed(
+                            2
+                          )}{" "}
+                          kWh
+                        </strong>.
+                      </p>
+
+                      <p>
+                        The battery is currently{" "}
+                        <strong>
+                          {String(
+                            batteryState
+                          ).toLowerCase()}
+                        </strong>{" "}
+                        and its health is{" "}
+                        <strong>
+                          {String(
+                            batteryHealth
+                          ).toLowerCase()}
+                        </strong>.
+                      </p>
+
+                      <p>
+                        You have{" "}
+                        <strong>
+                          {
+                            pendingRequests.length
+                          }
+                        </strong>{" "}
+                        pending buying request
+                        {pendingRequests.length ===
+                        1
+                          ? ""
+                          : "s"}.
+                      </p>
+
+                    </div>
+
+                    <div className="request-list">
+
+                      <div className="request-heading">
+                        👥 Pending Buying Requests
+                      </div>
+
+                      {pendingRequests.length ===
+                      0 ? (
+
+                        <div
+                          className="request-item"
+                        >
+                          <div>
+                            <div className="request-name">
+                              No pending requests
+                            </div>
+
+                            <div className="request-purpose">
+                              Your trading data currently
+                              has no pending buyer requests.
+                            </div>
+                          </div>
+
+                        </div>
+
+                      ) : (
+
+                        pendingRequests.map(
+                          (request) => (
+
+                            <div
+                              className="request-item"
+                              key={request.id}
+                            >
+
+                              <div>
+
+                                <div className="request-name">
+                                  {
+                                    request.consumer
+                                  }
+                                </div>
+
+                                <div className="request-purpose">
+                                  {request.urgency || "Normal"} priority · {request.reason || "No reason provided"}
+                                  {insights?.request_priority?.requests
+                                    ?.find((item) => item.request_id === request.id)
+                                    ?.reliability && (
+                                    <> · Reliability {Number(insights.request_priority.requests.find((item) => item.request_id === request.id).reliability.score).toFixed(0)}/100</>
+                                  )}
+                                </div>
+
+                              </div>
+
+                              <div className="request-energy">
+                                {Number(
+                                  request.energy ||
+                                    0
+                                ).toFixed(
+                                  2
+                                )}{" "}
+                                kWh
+                              </div>
+
+                            </div>
+
+                          )
+                        )
+
+                      )}
+
+                    </div>
+
+                    <div
+                      className="briefing-text"
+                      style={{
+                        marginTop: 18
+                      }}
+                    >
+
+                      <p>
+                        The current market
+                        average is{" "}
+                        <strong>
+                          {Number.isFinite(
+                            marketPrice
+                          )
+                            ? `₹${marketPrice.toFixed(
+                                2
+                              )}/kWh`
+                            : "not available"}
+                        </strong>.
+                      </p>
+
+                      <p>
+                        If all pending requests
+                        were supplied, the calculated
+                        remaining energy would be{" "}
+                        <strong>
+                          {remainingAfterRequests.toFixed(
+                            2
+                          )}{" "}
+                          kWh
+                        </strong>.
+                      </p>
+
+                    </div>
+
+                  </>
+                )}
+
+              {error && (
+
+                <div
+                  className="briefing-text"
+                  style={{
+                    color:
+                      "#ff9aaa"
+                  }}
+                >
+
+                  <p>
+                    {error}
+                  </p>
+
+                  <p>
+                    Make sure your FastAPI
+                    backend is running and
+                    try refreshing the page.
+                  </p>
+
+                </div>
+
+              )}
+
+              {loading && (
+
+                <div className="briefing-text">
+
+                  <p>
+                    I'm collecting your
+                    latest battery,
+                    trading and market
+                    information...
+                  </p>
+
+                </div>
+
+              )}
+
+            </div>
+
+            <div className="briefing-footer">
+
+              <button
+                className="voice-button"
+                onClick={() =>
+                  handleSpeak(
+                    briefingText
+                  )
+                }
+                disabled={loading}
+              >
+                🔊{" "}
+                {isSpeaking
+                  ? "Speaking..."
+                  : "Speak"}
+              </button>
+
+              <button
+                className="voice-button stop"
+                onClick={
+                  handleStop
+                }
+              >
+                ⏹ Stop
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      )}
+
+    </>
   );
 }

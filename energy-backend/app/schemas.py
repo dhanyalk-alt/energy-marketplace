@@ -68,6 +68,8 @@ class TradingResponse(BaseModel):
 class BuyRequestCreate(BaseModel):
     consumer: str
     energy: float
+    reason: str = Field(..., min_length=3, max_length=500)
+    urgency: Literal["Critical", "Essential", "Normal", "Flexible"] = "Normal"
 
 
 class BuyRequestResponse(BaseModel):
@@ -77,6 +79,9 @@ class BuyRequestResponse(BaseModel):
     energy: float
     total_price: float
     status: str
+    reason: str | None = None
+    urgency: str = "Normal"
+    offered_price: float | None = None
 
     class Config:
         from_attributes = True
@@ -143,3 +148,50 @@ class ChangePassword(BaseModel):
         ...,
         min_length=6
     )
+# ---------- AI Negotiation ----------
+
+class NegotiationCreate(BaseModel):
+    listing_id: int
+    consumer: str
+    energy: float = Field(..., gt=0)
+    consumer_offer: float = Field(..., gt=0)
+    reason: str = Field(default="Not provided", min_length=3, max_length=500)
+    urgency: Literal["Critical", "Essential", "Normal", "Flexible"] = "Normal"
+
+
+class NegotiationResponse(BaseModel):
+    id: int
+
+    listing_id: int
+
+    producer: str
+    consumer: str
+
+    energy: float
+
+    producer_price: float
+    consumer_offer: float
+
+    negotiated_price: float | None
+
+    status: str
+    reason: str | None = None
+    urgency: str = "Normal"
+
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
+class AssistantChatRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+    context: dict = Field(default_factory=dict)
+
+
+class AssistantChatResponse(BaseModel):
+    answer: str
+
+
+class ProducerInsightsRequest(BaseModel):
+    weather: dict = Field(default_factory=dict)

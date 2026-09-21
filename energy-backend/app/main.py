@@ -1,5 +1,9 @@
-from fastapi import FastAPI
+import asyncio
+
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from app.routers.market import router as market_router
 
@@ -13,6 +17,8 @@ from app.routers import (
     trading,
     settings
 )
+from app.routers.assistant import router as assistant_router
+from app.routers.producer_insights import router as producer_insights_router
 
 from app.battery_router import router as battery_router
 
@@ -35,6 +41,29 @@ async def startup():
         await conn.run_sync(
             Base.metadata.create_all
         )
+
+        # The application has existing installations, so add the new
+        # buy-request insight fields without requiring a destructive reset.
+        await conn.execute(text("""
+            ALTER TABLE buy_requests
+            ADD COLUMN IF NOT EXISTS reason VARCHAR(500)
+        """))
+        await conn.execute(text("""
+            ALTER TABLE buy_requests
+            ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'
+        """))
+        await conn.execute(text("""
+            ALTER TABLE buy_requests
+            ADD COLUMN IF NOT EXISTS offered_price DOUBLE PRECISION
+        """))
+        await conn.execute(text("""
+            ALTER TABLE negotiations
+            ADD COLUMN IF NOT EXISTS reason VARCHAR(500)
+        """))
+        await conn.execute(text("""
+            ALTER TABLE negotiations
+            ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'
+        """))
 
 
 # --------------------------------
@@ -86,6 +115,33 @@ app.include_router(
 
 app.include_router(
     market_router
+)
+
+
+@app.middleware("http")
+async def enforce_request_timeout(
+    request: Request,
+    call_next,
+):
+    try:
+        return await asyncio.wait_for(
+            call_next(request),
+            timeout=25,
+        )
+    except TimeoutError:
+        return JSONResponse(
+            status_code=504,
+            content={
+                "detail": "The request exceeded the 25-second limit."
+            },
+        )
+
+app.include_router(
+    assistant_router
+)
+
+app.include_router(
+    producer_insights_router
 )
 
 

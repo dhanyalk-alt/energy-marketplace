@@ -36,6 +36,13 @@ setLongitude(lon);
 
           setWeather(weatherData);
 
+          // The producer assistant reads this same live forecast to keep its
+          // solar and trading recommendation grounded in the weather screen.
+          localStorage.setItem(
+            "energy_marketplace_weather",
+            JSON.stringify(weatherData)
+          );
+
 setPlace({
   village:
    locationData.address.village ||

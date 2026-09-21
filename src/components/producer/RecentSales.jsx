@@ -1,4 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../config";
+
+const API = API_BASE_URL;
 
 export default function RecentSales() {
   const [sales, setSales] = useState([]);
@@ -37,7 +40,7 @@ export default function RecentSales() {
         setLoading(true);
 
         const response = await fetch(
-          `http://127.0.0.1:8000/trading/transactions/producer/${encodeURIComponent(
+          `${API}/trading/transactions/producer/${encodeURIComponent(
             username
           )}`
         );
@@ -64,7 +67,7 @@ export default function RecentSales() {
         setReviewLoading(true);
 
         const response = await fetch(
-          `http://127.0.0.1:8000/trading/reviews/${encodeURIComponent(
+          `${API}/trading/reviews/${encodeURIComponent(
             username
           )}`
         );

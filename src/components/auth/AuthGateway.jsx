@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Lock, Phone, ShieldCheck, Sun, Shield } from 'lucide-react';
+import { API_BASE_URL } from '../../config';
 
 export default function AuthGateway({ onLoginSuccess }) {
   const [activeTab, setActiveTab] = useState('login');
@@ -43,7 +44,7 @@ export default function AuthGateway({ onLoginSuccess }) {
 
     try {
       const response = await fetch(
-        `http://127.0.0.1:8000${endpoint}`,
+        `${API_BASE_URL}${endpoint}`,
         {
           method: 'POST',
           headers: {

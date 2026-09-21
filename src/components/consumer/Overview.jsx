@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { API_BASE_URL } from "../../config";
 import {
   LineChart,
   Line,
@@ -169,13 +170,13 @@ export default function Overview() {
 
       try {
         const transactionResponse = await fetch(
-          `http://127.0.0.1:8000/trading/transactions/consumer/${encodeURIComponent(
+          `${API_BASE_URL}/trading/transactions/consumer/${encodeURIComponent(
             username
           )}`
         );
 
         const marketResponse = await fetch(
-          "http://127.0.0.1:8000/trading/all"
+          `${API_BASE_URL}/trading/all`
         );
 
         if (!transactionResponse.ok) {

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config";
+
+const API = API_BASE_URL;
 
 import {
   LineChart,
@@ -212,11 +215,11 @@ export default function ProducerOverview() {
       const username = localStorage.getItem("username");
 
       const tradingResponse = await axios.get(
-        "http://127.0.0.1:8000/trading/all"
+        `${API}/trading/all`
       );
 
       const requestResponse = await axios.get(
-        "http://127.0.0.1:8000/trading/requests"
+        `${API}/trading/requests`
       );
 
       const tradingData = Array.isArray(tradingResponse.data)
@@ -301,7 +304,7 @@ export default function ProducerOverview() {
       setBatteryError("");
 
       const response = await axios.get(
-        "http://127.0.0.1:8000/battery/status"
+        `${API}/battery/status`
       );
 
       setBattery(response.data);
@@ -848,6 +851,7 @@ export default function ProducerOverview() {
         </div>
 
       </div>
+  
 
     </div>
   );

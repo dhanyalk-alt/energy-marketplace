@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config";
 import BuyEnergyModal from "./BuyEnergyModal";
+
+const API = API_BASE_URL;
 
 // ------------------------------------------------------------
 // DESIGN TOKENS
@@ -121,7 +124,7 @@ function Stars({ rating = 0 }) {
                 : "#475569",
           }}
         >
-          ★
+          â˜…
         </span>
       ))}
     </div>
@@ -158,7 +161,7 @@ export default function ProducerMarketplace() {
   const loadMarketplace = async () => {
     try {
       const response = await axios.get(
-        "http://127.0.0.1:8000/trading/all"
+        `${API}/trading/all`
       );
 
       setProducers(response.data);
@@ -180,7 +183,7 @@ export default function ProducerMarketplace() {
 
     try {
       const response = await axios.get(
-        `http://127.0.0.1:8000/trading/reviews/${encodeURIComponent(
+        `${API}/trading/reviews/${encodeURIComponent(
           producer
         )}`
       );
@@ -262,7 +265,7 @@ export default function ProducerMarketplace() {
             marginBottom: 6,
           }}
         >
-          Consumer · Market
+          Consumer Â· Market
         </div>
 
         <h1
@@ -356,7 +359,7 @@ export default function ProducerMarketplace() {
                     }}
                   >
                     No listings available
-                    right now — check back
+                    right now â€” check back
                     soon.
                   </td>
                 </tr>
@@ -502,7 +505,7 @@ export default function ProducerMarketplace() {
                     "18px",
                 }}
               >
-                ×
+                Ã—
               </button>
             </div>
 
@@ -639,7 +642,7 @@ export default function ProducerMarketplace() {
                         "8px",
                     }}
                   >
-                    ⭐
+                    â­
                   </div>
 
                   <div
@@ -824,7 +827,7 @@ function ProducerRow({
       try {
         const response =
           await axios.get(
-            `http://127.0.0.1:8000/trading/reviews/${encodeURIComponent(
+            `${API}/trading/reviews/${encodeURIComponent(
               item.producer
             )}`
           );
@@ -882,7 +885,7 @@ function ProducerRow({
       {/* Price */}
 
       <td>
-        ₹{item.price}
+        â‚¹{item.price}
       </td>
 
       {/* Rating */}
@@ -932,7 +935,7 @@ function ProducerRow({
                     "700",
                 }}
               >
-                ★
+                â˜…
               </span>
 
               <span
@@ -978,7 +981,7 @@ function ProducerRow({
             )
           }
         >
-          💬 View Reviews
+          ðŸ’¬ View Reviews
         </button>
       </td>
 

@@ -1,21 +1,37 @@
-from urllib import request
-
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models import User, Trading, BuyRequest, Transaction,  Review
-from app.auth import hash_password, verify_password
+from app.models import (
+    User,
+    Trading,
+    BuyRequest,
+    Transaction,
+    Review,
+    Negotiation,
+)
+
+from app.auth import (
+    hash_password,
+    verify_password,
+)
 
 
-# -------------------------------
-# Buy Energy
-# -------------------------------
-async def buy_energy(db, listing_id, consumer, energy):
+# =========================================================
+# BUY ENERGY
+# =========================================================
 
-    print("Listing ID received:", listing_id)
-
+async def buy_energy(
+    db: AsyncSession,
+    listing_id: int,
+    consumer: str,
+    energy: float,
+    reason: str,
+    urgency: str,
+):
     result = await db.execute(
-        select(Trading).where(Trading.id == listing_id)
+        select(Trading).where(
+            Trading.id == listing_id
+        )
     )
 
     listing = result.scalar_one_or_none()
@@ -23,17 +39,25 @@ async def buy_energy(db, listing_id, consumer, energy):
     if listing is None:
         return None
 
-    # Listing already sold out
-    if listing.energy <= 0:
-        raise Exception("This energy listing is sold out.")
+    if energy <= 0:
+        raise Exception(
+            "Energy must be greater than zero."
+        )
 
-    # User requested more than available
-    if energy > listing.energy:
+    if float(listing.energy) <= 0:
+        raise Exception(
+            "This energy listing is sold out."
+        )
+
+    if float(energy) > float(listing.energy):
         raise Exception(
             f"Only {listing.energy} kWh available."
         )
 
-    total = energy * listing.price
+    total = round(
+        float(energy) * float(listing.price),
+        2,
+    )
 
     request = BuyRequest(
         consumer=consumer,
@@ -41,36 +65,45 @@ async def buy_energy(db, listing_id, consumer, energy):
         listing_id=listing.id,
         energy=energy,
         total_price=total,
-        status="Pending"
+        status="Pending",
+        reason=reason,
+        urgency=urgency,
+        offered_price=float(listing.price),
     )
 
     db.add(request)
 
     await db.commit()
-
     await db.refresh(request)
 
     return request
 
 
-# -------------------------------
-# View Requests
-# -------------------------------
-async def get_requests(db):
+# =========================================================
+# GET BUY REQUESTS
+# =========================================================
 
+async def get_requests(
+    db: AsyncSession,
+):
     result = await db.execute(
         select(BuyRequest)
+        .order_by(
+            BuyRequest.id.desc()
+        )
     )
 
     return result.scalars().all()
 
 
-# -------------------------------
-# Accept Request
-# -------------------------------
-async def accept_request(db, request_id):
+# =========================================================
+# ACCEPT BUY REQUEST
+# =========================================================
 
-    # Find Buy Request
+async def accept_request(
+    db: AsyncSession,
+    request_id: int,
+):
     result = await db.execute(
         select(BuyRequest).where(
             BuyRequest.id == request_id
@@ -82,11 +115,11 @@ async def accept_request(db, request_id):
     if request is None:
         return None
 
-    # Already processed
     if request.status != "Pending":
-        raise Exception("Request already processed.")
+        raise Exception(
+            "Request already processed."
+        )
 
-    # Find Trading Listing
     result = await db.execute(
         select(Trading).where(
             Trading.id == request.listing_id
@@ -96,18 +129,26 @@ async def accept_request(db, request_id):
     listing = result.scalar_one_or_none()
 
     if listing is None:
-        raise Exception("Producer listing not found.")
+        raise Exception(
+            "Producer listing not found."
+        )
 
-    # Sold out
-    if listing.energy <= 0:
-        raise Exception("This listing is already sold out.")
+    if float(listing.energy) <= 0:
+        raise Exception(
+            "This listing is already sold out."
+        )
 
-    # Not enough energy
-    if listing.energy < request.energy:
-        raise Exception("Not enough energy available.")
+    if float(listing.energy) < float(request.energy):
+        raise Exception(
+            "Not enough energy available."
+        )
 
     # Deduct energy
-    listing.energy -= request.energy
+    listing.energy = round(
+        float(listing.energy)
+        - float(request.energy),
+        2,
+    )
 
     if listing.energy <= 0:
         listing.energy = 0
@@ -118,6 +159,7 @@ async def accept_request(db, request_id):
     # Accept request
     request.status = "Accepted"
 
+    # Create transaction
     transaction = Transaction(
         producer=request.producer,
         consumer=request.consumer,
@@ -126,7 +168,7 @@ async def accept_request(db, request_id):
         energy=request.energy,
         price=listing.price,
         total_amount=request.total_price,
-        status="Completed"
+        status="Completed",
     )
 
     db.add(transaction)
@@ -140,11 +182,14 @@ async def accept_request(db, request_id):
     return request
 
 
-# -------------------------------
-# Reject Request
-# -------------------------------
-async def reject_request(db, request_id):
+# =========================================================
+# REJECT BUY REQUEST
+# =========================================================
 
+async def reject_request(
+    db: AsyncSession,
+    request_id: int,
+):
     result = await db.execute(
         select(BuyRequest).where(
             BuyRequest.id == request_id
@@ -157,91 +202,140 @@ async def reject_request(db, request_id):
         return None
 
     if request.status != "Pending":
-        raise Exception("Request already processed.")
+        raise Exception(
+            "Request already processed."
+        )
 
     request.status = "Rejected"
 
     await db.commit()
-
     await db.refresh(request)
 
     return request
 
 
-# -------------------------------
-# Create Trading
-# -------------------------------
+# =========================================================
+# CREATE TRADING LISTING
+# =========================================================
+
 async def create_trading(
     db: AsyncSession,
     producer: str,
     energy: float,
-    price: float
+    price: float,
 ):
+    if energy <= 0:
+        raise Exception(
+            "Energy must be greater than zero."
+        )
+
+    if price < 0:
+        raise Exception(
+            "Price cannot be negative."
+        )
 
     trade = Trading(
         producer=producer,
         energy=energy,
         price=price,
-        status="Available"
+        status="Available",
     )
 
     db.add(trade)
 
     await db.commit()
-
     await db.refresh(trade)
 
     return trade
 
 
-# -------------------------------
-# Get All Trading
-# -------------------------------
-async def get_all_trading(db: AsyncSession):
+# =========================================================
+# CREATE LISTING
+# =========================================================
 
+async def create_listing(
+    db: AsyncSession,
+    producer: str,
+    energy: float,
+    price: float,
+):
+    return await create_trading(
+        db=db,
+        producer=producer,
+        energy=energy,
+        price=price,
+    )
+
+
+# =========================================================
+# GET ALL TRADING LISTINGS
+# =========================================================
+
+async def get_all_trading(
+    db: AsyncSession,
+):
     result = await db.execute(
-        select(Trading).where(
-            Trading.energy > 0
+        select(Trading)
+        .where(
+            Trading.energy > 0,
+            Trading.status == "Available",
+        )
+        .order_by(
+            Trading.id.desc()
         )
     )
 
     return result.scalars().all()
 
 
-# -------------------------------
-# Create Listing
-# -------------------------------
-async def create_listing(
-    db,
-    producer,
-    energy,
-    price
-):
+# =========================================================
+# GET TRADING LISTING BY ID
+# =========================================================
 
-    listing = Trading(
-        producer=producer,
-        energy=energy,
-        price=price,
-        status="Available"
+async def get_trading_listing(
+    db: AsyncSession,
+    listing_id: int,
+):
+    result = await db.execute(
+        select(Trading).where(
+            Trading.id == listing_id,
+            Trading.energy > 0,
+            Trading.status == "Available",
+        )
     )
 
-    db.add(listing)
-
-    await db.commit()
-
-    await db.refresh(listing)
-
-    return listing
+    return result.scalar_one_or_none()
 
 
-# -------------------------------
-# Get User By Username
-# -------------------------------
+# =========================================================
+# GET NEGOTIATIONS FOR PRODUCER
+# =========================================================
+
+async def get_negotiations_by_producer(
+    db: AsyncSession,
+    producer: str,
+):
+    result = await db.execute(
+        select(Negotiation)
+        .where(
+            Negotiation.producer == producer
+        )
+        .order_by(
+            Negotiation.id.desc()
+        )
+    )
+
+    return result.scalars().all()
+
+
+# =========================================================
+# GET USER BY USERNAME
+# =========================================================
+
 async def get_user_by_username(
     db: AsyncSession,
-    username: str
+    username: str,
 ):
-
     result = await db.execute(
         select(User).where(
             User.username == username
@@ -251,14 +345,14 @@ async def get_user_by_username(
     return result.scalar_one_or_none()
 
 
-# -------------------------------
-# Get User By Phone
-# -------------------------------
+# =========================================================
+# GET USER BY PHONE
+# =========================================================
+
 async def get_user_by_phone(
     db: AsyncSession,
-    phone_number: str
+    phone_number: str,
 ):
-
     result = await db.execute(
         select(User).where(
             User.phone_number == phone_number
@@ -268,83 +362,97 @@ async def get_user_by_phone(
     return result.scalar_one_or_none()
 
 
-# -------------------------------
-# Create User
-# -------------------------------
+# =========================================================
+# CREATE USER
+# =========================================================
+
 async def create_user(
     db: AsyncSession,
     username: str,
     phone_number: str,
     password: str,
-    role: str
+    role: str,
 ):
-
     user = User(
         username=username,
         phone_number=phone_number,
         password_hash=hash_password(password),
         role=role,
-        is_active=True
+        is_active=True,
     )
 
     db.add(user)
 
     await db.commit()
-
     await db.refresh(user)
 
     return user
 
+
+# =========================================================
+# PRODUCER TRANSACTIONS
+# =========================================================
+
 async def get_transactions_by_producer(
     db: AsyncSession,
-    producer: str
+    producer: str,
 ):
     result = await db.execute(
         select(Transaction)
-        .where(Transaction.producer == producer)
-        .order_by(Transaction.created_at.desc())
+        .where(
+            Transaction.producer == producer
+        )
+        .order_by(
+            Transaction.created_at.desc()
+        )
     )
 
     return result.scalars().all()
 
+
+# =========================================================
+# CONSUMER TRANSACTIONS
+# =========================================================
 
 async def get_transactions_by_consumer(
     db: AsyncSession,
-    consumer: str
+    consumer: str,
 ):
     result = await db.execute(
         select(Transaction)
-        .where(Transaction.consumer == consumer)
-        .order_by(Transaction.created_at.desc())
+        .where(
+            Transaction.consumer == consumer
+        )
+        .order_by(
+            Transaction.created_at.desc()
+        )
     )
 
     return result.scalars().all()
 
-# -------------------------------
-# Producer Market Insights
-# -------------------------------
+
+# =========================================================
+# MARKET DATA
+# =========================================================
+
 async def get_market_data(
     db: AsyncSession,
-    current_producer: str
+    current_producer: str,
 ):
-    """
-    Returns active listings from OTHER producers
-    along with market price statistics.
-    """
-
     result = await db.execute(
         select(Trading)
         .where(
             Trading.energy > 0,
             Trading.status == "Available",
-            Trading.producer != current_producer
+            Trading.producer != current_producer,
         )
-        .order_by(Trading.price.asc())
+        .order_by(
+            Trading.price.asc()
+        )
     )
 
     listings = result.scalars().all()
 
-    # No other producer listings available
     if not listings:
         return {
             "market_summary": {
@@ -352,62 +460,329 @@ async def get_market_data(
                 "highest_price": 0,
                 "average_price": 0,
                 "total_energy_available": 0,
-                "active_listings": 0
+                "active_listings": 0,
             },
-            "listings": []
+            "listings": [],
         }
 
-    prices = [listing.price for listing in listings]
-    energies = [listing.energy for listing in listings]
+    prices = [
+        float(listing.price)
+        for listing in listings
+    ]
+
+    energies = [
+        float(listing.energy)
+        for listing in listings
+    ]
 
     return {
         "market_summary": {
-            "lowest_price": round(min(prices), 2),
-            "highest_price": round(max(prices), 2),
-            "average_price": round(sum(prices) / len(prices), 2),
-            "total_energy_available": round(sum(energies), 2),
-            "active_listings": len(listings)
+            "lowest_price": round(
+                min(prices),
+                2,
+            ),
+            "highest_price": round(
+                max(prices),
+                2,
+            ),
+            "average_price": round(
+                sum(prices) / len(prices),
+                2,
+            ),
+            "total_energy_available": round(
+                sum(energies),
+                2,
+            ),
+            "active_listings": len(listings),
         },
-
         "listings": [
             {
                 "id": listing.id,
                 "producer": listing.producer,
-                "energy": round(listing.energy, 2),
-                "price": round(listing.price, 2),
-                "status": listing.status
+                "energy": round(
+                    float(listing.energy),
+                    2,
+                ),
+                "price": round(
+                    float(listing.price),
+                    2,
+                ),
+                "status": listing.status,
             }
             for listing in listings
-        ]
+        ],
     }
+
+
+# =========================================================
+# GET MARKET LISTINGS
+# =========================================================
 
 async def get_market_listings(
     db: AsyncSession,
-    current_producer: str
+    current_producer: str,
 ):
     result = await db.execute(
         select(Trading)
         .where(
             Trading.energy > 0,
             Trading.status == "Available",
-            Trading.producer != current_producer
+            Trading.producer != current_producer,
         )
-        .order_by(Trading.price.asc())
+        .order_by(
+            Trading.price.asc()
+        )
     )
 
     return result.scalars().all()
 
-# -------------------------------
-# Create Producer Review
-# -------------------------------
+
+# =========================================================
+# ACCEPT NEGOTIATION
+#
+# Pending
+#    ↓
+# Producer accepts
+#    ↓
+# BuyRequest created
+#    ↓
+# Energy deducted
+#    ↓
+# Transaction created
+#    ↓
+# Negotiation accepted
+# =========================================================
+
+async def accept_negotiation(
+    db: AsyncSession,
+    negotiation_id: int,
+):
+    negotiation = await db.get(
+        Negotiation,
+        negotiation_id,
+    )
+
+    if negotiation is None:
+        raise Exception(
+            "Negotiation not found."
+        )
+
+    # Already rejected
+    if negotiation.status == "Rejected":
+        raise Exception(
+            "Rejected negotiation cannot be accepted."
+        )
+
+    # Already accepted
+    if negotiation.status == "Accepted":
+        result = await db.execute(
+            select(BuyRequest).where(
+                BuyRequest.listing_id
+                == negotiation.listing_id,
+                BuyRequest.consumer
+                == negotiation.consumer,
+                BuyRequest.producer
+                == negotiation.producer,
+                BuyRequest.energy
+                == negotiation.energy,
+                BuyRequest.status
+                == "Accepted",
+            )
+            .order_by(
+                BuyRequest.id.desc()
+            )
+        )
+
+        existing_request = (
+            result.scalars().first()
+        )
+
+        if existing_request is not None:
+            result = await db.execute(
+                select(Transaction).where(
+                    Transaction.request_id
+                    == existing_request.id
+                )
+            )
+
+            existing_transaction = (
+                result.scalars().first()
+            )
+
+            if existing_transaction is not None:
+                return {
+                    "message": (
+                        "Negotiation is already accepted."
+                    ),
+                    "negotiation": negotiation,
+                    "buy_request": existing_request,
+                    "transaction": existing_transaction,
+                }
+
+        raise Exception(
+            "Negotiation is already accepted."
+        )
+
+    if negotiation.status != "Pending":
+        raise Exception(
+            "Only pending negotiations can be accepted."
+        )
+
+    if negotiation.negotiated_price is None:
+        raise Exception(
+            "Negotiated price is not available."
+        )
+
+    # Find listing
+    result = await db.execute(
+        select(Trading).where(
+            Trading.id == negotiation.listing_id
+        )
+    )
+
+    listing = result.scalar_one_or_none()
+
+    if listing is None:
+        raise Exception(
+            "Energy listing not found."
+        )
+
+    # Check energy
+    if float(listing.energy) <= 0:
+        raise Exception(
+            "This energy listing is sold out."
+        )
+
+    if float(listing.energy) < float(
+        negotiation.energy
+    ):
+        raise Exception(
+            f"Only {listing.energy} kWh available."
+        )
+
+    # Final negotiated total
+    total_amount = round(
+        float(negotiation.energy)
+        * float(negotiation.negotiated_price),
+        2,
+    )
+
+    # Create BuyRequest only after producer accepts
+    buy_request = BuyRequest(
+        consumer=negotiation.consumer,
+        producer=negotiation.producer,
+        listing_id=negotiation.listing_id,
+        energy=negotiation.energy,
+        total_price=total_amount,
+        status="Accepted",
+    )
+
+    db.add(buy_request)
+
+    # Generate BuyRequest ID
+    await db.flush()
+
+    # Deduct energy
+    listing.energy = round(
+        float(listing.energy)
+        - float(negotiation.energy),
+        2,
+    )
+
+    if listing.energy <= 0:
+        listing.energy = 0
+        listing.status = "Sold Out"
+    else:
+        listing.status = "Available"
+
+    # Accept negotiation
+    negotiation.status = "Accepted"
+
+    # Create transaction using negotiated price
+    transaction = Transaction(
+        producer=negotiation.producer,
+        consumer=negotiation.consumer,
+        listing_id=negotiation.listing_id,
+        request_id=buy_request.id,
+        energy=negotiation.energy,
+        price=negotiation.negotiated_price,
+        total_amount=total_amount,
+        status="Completed",
+    )
+
+    db.add(transaction)
+
+    await db.commit()
+
+    await db.refresh(negotiation)
+    await db.refresh(buy_request)
+    await db.refresh(listing)
+    await db.refresh(transaction)
+
+    return {
+        "message": (
+            "Negotiation accepted successfully."
+        ),
+        "negotiation": negotiation,
+        "buy_request": buy_request,
+        "transaction": transaction,
+        "listing": listing,
+    }
+
+
+# =========================================================
+# REJECT NEGOTIATION
+# =========================================================
+
+async def reject_negotiation(
+    db: AsyncSession,
+    negotiation_id: int,
+):
+    negotiation = await db.get(
+        Negotiation,
+        negotiation_id,
+    )
+
+    if negotiation is None:
+        raise Exception(
+            "Negotiation not found."
+        )
+
+    if negotiation.status == "Rejected":
+        return {
+            "message": (
+                "Negotiation is already rejected."
+            ),
+            "negotiation": negotiation,
+        }
+
+    if negotiation.status == "Accepted":
+        raise Exception(
+            "Accepted negotiation cannot be rejected."
+        )
+
+    negotiation.status = "Rejected"
+
+    await db.commit()
+    await db.refresh(negotiation)
+
+    return {
+        "message": "Negotiation rejected.",
+        "negotiation": negotiation,
+    }
+
+
+# =========================================================
+# CREATE REVIEW
+# =========================================================
+
 async def create_review(
     db: AsyncSession,
     transaction_id: int,
     consumer: str,
     rating: int,
-    comment: str | None = None
+    comment: str | None = None,
 ):
-    # Find transaction
     result = await db.execute(
         select(Transaction).where(
             Transaction.id == transaction_id
@@ -417,27 +792,25 @@ async def create_review(
     transaction = result.scalar_one_or_none()
 
     if transaction is None:
-        raise Exception("Transaction not found.")
+        raise Exception(
+            "Transaction not found."
+        )
 
-    # Make sure the person reviewing is the actual buyer
     if transaction.consumer != consumer:
         raise Exception(
             "You can review only your own purchases."
         )
 
-    # Only completed transactions can be reviewed
     if transaction.status != "Completed":
         raise Exception(
             "Only completed transactions can be reviewed."
         )
 
-    # Rating validation
     if rating < 1 or rating > 5:
         raise Exception(
             "Rating must be between 1 and 5."
         )
 
-    # Check whether this transaction already has a review
     result = await db.execute(
         select(Review).where(
             Review.transaction_id == transaction_id
@@ -456,24 +829,24 @@ async def create_review(
         consumer=consumer,
         transaction_id=transaction.id,
         rating=rating,
-        comment=comment
+        comment=comment,
     )
 
     db.add(review)
 
     await db.commit()
-
     await db.refresh(review)
 
     return review
 
 
-# -------------------------------
-# Get Reviews For Producer
-# -------------------------------
+# =========================================================
+# GET PRODUCER REVIEWS
+# =========================================================
+
 async def get_producer_reviews(
     db: AsyncSession,
-    producer: str
+    producer: str,
 ):
     result = await db.execute(
         select(Review)
@@ -492,7 +865,7 @@ async def get_producer_reviews(
             "producer": producer,
             "total_reviews": 0,
             "average_rating": 0,
-            "reviews": []
+            "reviews": [],
         }
 
     ratings = [
@@ -505,7 +878,7 @@ async def get_producer_reviews(
         "total_reviews": len(reviews),
         "average_rating": round(
             sum(ratings) / len(ratings),
-            2
+            2,
         ),
         "reviews": [
             {
@@ -518,18 +891,20 @@ async def get_producer_reviews(
                     review.created_at.isoformat()
                     if review.created_at
                     else None
-                )
+                ),
             }
             for review in reviews
-        ]
+        ],
     }
 
-# -------------------------------
-# Get Producer Settings
-# -------------------------------
+
+# =========================================================
+# GET SETTINGS
+# =========================================================
+
 async def get_settings(
     db: AsyncSession,
-    username: str
+    username: str,
 ):
     result = await db.execute(
         select(User).where(
@@ -540,25 +915,28 @@ async def get_settings(
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise Exception("User not found.")
+        raise Exception(
+            "User not found."
+        )
 
     return {
         "username": user.username,
         "phone_number": user.phone_number,
         "role": user.role,
         "is_active": user.is_active,
-        "default_selling_price": 0.0
+        "default_selling_price": 0.0,
     }
 
 
-# -------------------------------
-# Update Producer Settings
-# -------------------------------
+# =========================================================
+# UPDATE SETTINGS
+# =========================================================
+
 async def update_settings(
     db: AsyncSession,
     username: str,
     phone_number: str | None = None,
-    default_selling_price: float | None = None
+    default_selling_price: float | None = None,
 ):
     result = await db.execute(
         select(User).where(
@@ -569,7 +947,9 @@ async def update_settings(
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise Exception("User not found.")
+        raise Exception(
+            "User not found."
+        )
 
     if phone_number is not None:
         user.phone_number = phone_number
@@ -586,83 +966,19 @@ async def update_settings(
             default_selling_price
             if default_selling_price is not None
             else 0.0
-        )
-    }
-
-# -------------------------------
-# Get Settings
-# -------------------------------
-async def get_settings(
-    db: AsyncSession,
-    username: str
-):
-    result = await db.execute(
-        select(User).where(
-            User.username == username
-        )
-    )
-
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise Exception("User not found.")
-
-    return {
-        "username": user.username,
-        "phone_number": user.phone_number,
-        "role": user.role,
-        "is_active": user.is_active,
-        "default_selling_price": 0.0
+        ),
     }
 
 
-# -------------------------------
-# Update Settings
-# -------------------------------
-async def update_settings(
-    db: AsyncSession,
-    username: str,
-    phone_number: str | None = None,
-    default_selling_price: float | None = None
-):
-    result = await db.execute(
-        select(User).where(
-            User.username == username
-        )
-    )
+# =========================================================
+# CHANGE PASSWORD
+# =========================================================
 
-    user = result.scalar_one_or_none()
-
-    if user is None:
-        raise Exception("User not found.")
-
-    if phone_number is not None:
-        user.phone_number = phone_number
-
-    await db.commit()
-    await db.refresh(user)
-
-    return {
-        "username": user.username,
-        "phone_number": user.phone_number,
-        "role": user.role,
-        "is_active": user.is_active,
-        "default_selling_price": (
-            default_selling_price
-            if default_selling_price is not None
-            else 0.0
-        )
-    }
-
-
-# -------------------------------
-# Change Password
-# -------------------------------
 async def change_password(
     db: AsyncSession,
     username: str,
     current_password: str,
-    new_password: str
+    new_password: str,
 ):
     result = await db.execute(
         select(User).where(
@@ -673,27 +989,26 @@ async def change_password(
     user = result.scalar_one_or_none()
 
     if user is None:
-        raise Exception("User not found.")
+        raise Exception(
+            "User not found."
+        )
 
-    # Check current password
     if not verify_password(
         current_password,
-        user.password_hash
+        user.password_hash,
     ):
         raise Exception(
             "Current password is incorrect."
         )
 
-    # Prevent same password
     if verify_password(
         new_password,
-        user.password_hash
+        user.password_hash,
     ):
         raise Exception(
             "New password must be different."
         )
 
-    # Hash new password
     user.password_hash = hash_password(
         new_password
     )
@@ -702,5 +1017,7 @@ async def change_password(
     await db.refresh(user)
 
     return {
-        "message": "Password changed successfully."
+        "message": (
+            "Password changed successfully."
+        )
     }

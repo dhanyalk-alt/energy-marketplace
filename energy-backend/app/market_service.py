@@ -1,5 +1,6 @@
 import pandas as pd
 from pathlib import Path
+from functools import lru_cache
 
 
 # ============================================================
@@ -21,6 +22,7 @@ MARKET_FILE = (
 # LOAD IEX MARKET DATA
 # ============================================================
 
+@lru_cache(maxsize=1)
 def load_iex_market_data():
     """
     Load the real IEX Day-Ahead Market Snapshot Excel file.

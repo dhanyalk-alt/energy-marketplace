@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
+import { API_BASE_URL } from "../../config";
+
+const API = API_BASE_URL;
 
 const colors = {
   bg: "#0B1420",
@@ -139,7 +142,7 @@ export default function Market() {
       // ======================================================
 
       const producerResponse = await axios.get(
-        `http://127.0.0.1:8000/trading/market/${encodeURIComponent(
+        `${API}/trading/market/${encodeURIComponent(
           username
         )}`
       );
@@ -157,7 +160,7 @@ export default function Market() {
       // ======================================================
 
       const iexResponse = await axios.get(
-        "http://127.0.0.1:8000/market/iex/latest"
+        `${API}/market/iex/latest`
       );
 
       /*
