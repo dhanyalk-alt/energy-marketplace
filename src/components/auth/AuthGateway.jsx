@@ -39,9 +39,8 @@ export default function AuthGateway({ onLoginSuccess }) {
     : {
         username,
         password,
+        role,
       };
-          console.log("Payload:", payload);
-
     try {
       const response = await fetch(
         `${API_BASE_URL}${endpoint}`,
@@ -54,8 +53,7 @@ export default function AuthGateway({ onLoginSuccess }) {
         }
       );
 
-      const data = await response.json();
-      console.log("Backend Response:", data);
+      const data = await response.json().catch(() => ({}));
 
       if (!response.ok) {
         throw new Error(
@@ -88,7 +86,11 @@ if (activeTab === 'register') {
   onLoginSuccess(data.role);
 }
     } catch (err) {
-      setErrorMessage(err.message);
+      setErrorMessage(
+        err.name === 'AbortError'
+          ? 'The sign-in request timed out. Check that the backend is running and try again.'
+          : err.message || 'Authentication failed. Please try again.'
+      );
     } finally {
       setLoading(false);
     }
@@ -111,22 +113,6 @@ if (activeTab === 'register') {
                   : {}),
               }}
             >
-              <div style={{ marginBottom: "15px" }}>
-    <label>Login As</label>
-
-    <select
-        value={role}
-        onChange={(e) => setRole(e.target.value)}
-        style={{
-            width: "100%",
-            padding: "10px",
-            marginTop: "5px"
-        }}
-    >
-        <option value="producer">Producer</option>
-        <option value="consumer">Consumer</option>
-    </select>
-</div>
               Sign In
             </button>
 
@@ -175,6 +161,8 @@ if (activeTab === 'register') {
 
                 <input
                   type="text"
+                  name="username"
+                  autoComplete="username"
                   value={username}
                   onChange={(e) =>
                     setUsername(e.target.value)
@@ -185,6 +173,24 @@ if (activeTab === 'register') {
                 />
               </div>
             </div>
+
+            {activeTab === 'login' && (
+              <div style={styles.inputWrapper}>
+                <label style={styles.label}>
+                  Sign in as
+                </label>
+
+                <select
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  style={styles.roleSelect}
+                  aria-label="Sign in as"
+                >
+                  <option value="producer">Producer</option>
+                  <option value="consumer">Consumer</option>
+                </select>
+              </div>
+            )}
 
             {activeTab === 'register' && (
               <>
@@ -199,8 +205,10 @@ if (activeTab === 'register') {
                       style={styles.inputIcon}
                     />
 
-                    <input
-                      type="tel"
+                <input
+                  type="tel"
+                  name="tel"
+                  autoComplete="tel"
                       value={phoneNumber}
                       onChange={(e) =>
                         setPhoneNumber(
@@ -267,6 +275,12 @@ if (activeTab === 'register') {
 
                 <input
                   type="password"
+                  name="password"
+                  autoComplete={
+                    activeTab === 'login'
+                      ? 'current-password'
+                      : 'new-password'
+                  }
                   value={password}
                   onChange={(e) =>
                     setPassword(e.target.value)
@@ -292,6 +306,8 @@ if (activeTab === 'register') {
 
                   <input
                     type="password"
+                    name="confirmPassword"
+                    autoComplete="new-password"
                     value={confirmPassword}
                     onChange={(e) =>
                       setConfirmPassword(
@@ -354,6 +370,7 @@ const styles = {
   inputBox: { display: 'flex', alignItems: 'center', backgroundColor: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '0 16px', transition: 'all 0.2s' },
   inputIcon: { color: '#94a3b8', marginRight: '12px' },
   input: { flex: 1, padding: '14px 0', border: 'none', outline: 'none', fontSize: '14px', color: '#1e293b' },
+  roleSelect: { width: '100%', padding: '14px 16px', border: '1px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', color: '#1e293b', fontSize: '14px', outline: 'none' },
   roleGrid: { display: 'flex', gap: '10px' },
   roleOption: { flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', fontSize: '12px', fontWeight: '600', color: '#64748b', cursor: 'pointer', transition: 'all 0.2s' },
   activeProducer: { borderColor: '#10b981', backgroundColor: '#f0fdf4', color: '#15803d' },

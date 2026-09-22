@@ -67,6 +67,12 @@ async def login(
             detail="Invalid password"
         )
 
+    if db_user.role != user.role:
+        raise HTTPException(
+            status_code=403,
+            detail=f"This account is registered as a {db_user.role}. Select that role to sign in."
+        )
+
     # Create JWT token
     token = create_access_token(
         {

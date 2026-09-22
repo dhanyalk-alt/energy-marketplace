@@ -18,7 +18,17 @@ if (typeof window !== "undefined" && !window.__energyMarketplaceFetchTimeout) {
     return nativeFetch(input, {
       ...init,
       signal: init.signal || controller.signal,
-    }).finally(() => window.clearTimeout(timeoutId));
+    })
+      .catch((error) => {
+        // Do not expose the browser-specific "signal is aborted" message.
+        if (controller.signal.aborted && !init.signal?.aborted) {
+          throw new Error(
+            `The request timed out after ${REQUEST_TIMEOUT_MS / 1000} seconds. Please check that the backend is running.`
+          );
+        }
+        throw error;
+      })
+      .finally(() => window.clearTimeout(timeoutId));
   };
 
   window.__energyMarketplaceFetchTimeout = true;

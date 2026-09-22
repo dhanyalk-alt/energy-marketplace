@@ -17,6 +17,7 @@ class UserRegister(BaseModel):
 class UserLogin(BaseModel):
     username: str
     password: str
+    role: Literal["producer", "consumer"]
 
 
 # ---------- User Response ----------
@@ -184,9 +185,16 @@ class NegotiationResponse(BaseModel):
         from_attributes = True
 
 
+class AssistantChatTurn(BaseModel):
+    role: Literal["user", "assistant"]
+    content: str = Field(..., min_length=1, max_length=4000)
+
+
 class AssistantChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
-    context: dict = Field(default_factory=dict)
+    # Short conversational context improves follow-up questions. Marketplace
+    # data itself is always reloaded on the server from the authenticated user.
+    history: list[AssistantChatTurn] = Field(default_factory=list, max_length=12)
 
 
 class AssistantChatResponse(BaseModel):

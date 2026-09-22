@@ -21,6 +21,7 @@ from app.routers.assistant import router as assistant_router
 from app.routers.producer_insights import router as producer_insights_router
 
 from app.battery_router import router as battery_router
+from app.ai_config import validate_openai_configuration
 
 
 # Create FastAPI app
@@ -36,34 +37,20 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup():
 
-    async with engine.begin() as conn:
+    validate_openai_configuration()
 
+    async with engine.begin() as conn:
         await conn.run_sync(
             Base.metadata.create_all
         )
 
-        # The application has existing installations, so add the new
-        # buy-request insight fields without requiring a destructive reset.
-        await conn.execute(text("""
-            ALTER TABLE buy_requests
-            ADD COLUMN IF NOT EXISTS reason VARCHAR(500)
-        """))
-        await conn.execute(text("""
-            ALTER TABLE buy_requests
-            ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'
-        """))
-        await conn.execute(text("""
-            ALTER TABLE buy_requests
-            ADD COLUMN IF NOT EXISTS offered_price DOUBLE PRECISION
-        """))
-        await conn.execute(text("""
-            ALTER TABLE negotiations
-            ADD COLUMN IF NOT EXISTS reason VARCHAR(500)
-        """))
-        await conn.execute(text("""
-            ALTER TABLE negotiations
-            ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'
-        """))
+        # PostgreSQL migration statements are idempotent. They retain existing
+        # data and complete quickly when the columns already exist.
+        await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS reason VARCHAR(500)"))
+        await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'"))
+        await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS offered_price DOUBLE PRECISION"))
+        await conn.execute(text("ALTER TABLE negotiations ADD COLUMN IF NOT EXISTS reason VARCHAR(500)"))
+        await conn.execute(text("ALTER TABLE negotiations ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'"))
 
 
 # --------------------------------

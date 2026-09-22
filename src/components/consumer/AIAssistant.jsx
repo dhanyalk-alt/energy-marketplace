@@ -184,11 +184,13 @@ export default function AIAssistant() {
       `${API_BASE}/assistant/chat`,
       {
         message: question,
-        context: {
-          consumer: consumerUsername,
-          listings: producers.slice(0, 20),
-          negotiations: negotiations.slice(0, 20),
-        },
+        history: messages
+          .slice(-8)
+          .filter((item) => item.type === "user" || item.type === "ai")
+          .map((item) => ({
+            role: item.type === "ai" ? "assistant" : "user",
+            content: item.text,
+          })),
       },
       {
         headers: {
@@ -961,240 +963,6 @@ ${
   };
 
   // ============================================================
-  // NORMAL AI RESPONSE
-  // ============================================================
-
-  const generateResponse = (
-    question
-  ) => {
-    const q =
-      question.toLowerCase();
-
-    if (
-      q.includes("my negotiation") ||
-      q.includes("negotiation status") ||
-      q.includes("my offer") ||
-      q.includes("pending offer")
-    ) {
-      if (negotiations.length === 0) {
-        return "You do not have any negotiations yet.";
-      }
-
-      return negotiations
-        .slice(0, 5)
-        .map((negotiation) =>
-          `#${negotiation.id}: ${Number(negotiation.energy).toFixed(2)} kWh from ${negotiation.producer} at ₹${Number(negotiation.negotiated_price).toFixed(2)}/kWh — ${negotiation.status}`
-        )
-        .join("\n");
-    }
-
-    if (
-      !Array.isArray(producers) ||
-      producers.length === 0
-    ) {
-      return "There are currently no active energy listings available.";
-    }
-
-    // ----------------------------------------------------------
-    // Cheapest
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("cheap") ||
-      q.includes("cheapest") ||
-      q.includes("lowest price")
-    ) {
-      const cheapest =
-        [...producers]
-          .filter(
-            (item) =>
-              Number.isFinite(
-                Number(item.price)
-              )
-          )
-          .sort(
-            (a, b) =>
-              Number(a.price) -
-              Number(b.price)
-          )[0];
-
-      if (!cheapest) {
-        return "I could not find a valid energy price.";
-      }
-
-      return (
-        `The cheapest available energy is from ${cheapest.producer} ` +
-        `at ₹${Number(
-          cheapest.price
-        ).toFixed(
-          2
-        )} per kWh, with ${Number(
-          cheapest.energy || 0
-        ).toFixed(
-          2
-        )} kWh available.`
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Highest energy
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("most energy") ||
-      q.includes("highest energy") ||
-      q.includes("more energy")
-    ) {
-      const producer =
-        [...producers]
-          .sort(
-            (a, b) =>
-              Number(b.energy || 0) -
-              Number(a.energy || 0)
-          )[0];
-
-      return (
-        `${producer.producer} currently has the highest available energy: ` +
-        `${Number(
-          producer.energy || 0
-        ).toFixed(
-          2
-        )} kWh at ₹${Number(
-          producer.price || 0
-        ).toFixed(
-          2
-        )} per kWh.`
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Available energy
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("available energy") ||
-      q.includes("energy available") ||
-      q.includes("how much energy")
-    ) {
-      const totalEnergy =
-        producers.reduce(
-          (sum, producer) =>
-            sum +
-            Number(
-              producer.energy || 0
-            ),
-          0
-        );
-
-      return (
-        `There are currently ${totalEnergy.toFixed(
-          2
-        )} kWh of energy available across ${producers.length} active listings.`
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Current price
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("price") ||
-      q.includes("cost") ||
-      q.includes("rate")
-    ) {
-      const prices =
-        producers
-          .map((p) =>
-            Number(p.price)
-          )
-          .filter((price) =>
-            Number.isFinite(price)
-          );
-
-      if (
-        prices.length === 0
-      ) {
-        return "No valid marketplace prices are currently available.";
-      }
-
-      const lowest =
-        Math.min(...prices);
-
-      const highest =
-        Math.max(...prices);
-
-      const average =
-        prices.reduce(
-          (sum, price) =>
-            sum + price,
-          0
-        ) / prices.length;
-
-      return (
-        `Current marketplace prices range from ₹${lowest.toFixed(
-          2
-        )} to ₹${highest.toFixed(
-          2
-        )} per kWh. ` +
-        `The average price is approximately ₹${average.toFixed(
-          2
-        )} per kWh.`
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Producers
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("producer") ||
-      q.includes("seller") ||
-      q.includes("who is selling")
-    ) {
-      const names =
-        producers
-          .map(
-            (producer) =>
-              producer.producer
-          )
-          .filter(Boolean)
-          .join(", ");
-
-      return (
-        `Currently available producers are: ${names}.`
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Greeting
-    // ----------------------------------------------------------
-
-    if (
-      q.includes("hello") ||
-      q.includes("hi") ||
-      q.includes("hey")
-    ) {
-      return (
-        "Hello! 👋 I can help you compare energy prices, find producers, check available energy, and negotiate an energy offer."
-      );
-    }
-
-    // ----------------------------------------------------------
-    // Default
-    // ----------------------------------------------------------
-
-    return (
-      `I can help with things like:\n\n` +
-      `• Cheapest energy\n` +
-      `• Available energy\n` +
-      `• Current prices\n` +
-      `• Producers selling energy\n` +
-      `• Energy negotiation\n\n` +
-      `Try: "I need 5 kWh from Gokul at ₹18 per kWh."`
-    );
-  };
-
-  // ============================================================
   // DETECT NEGOTIATION REQUEST
   // ============================================================
 
@@ -1275,19 +1043,9 @@ ${
             trimmed
           );
       } else {
-        try {
-          response = {
-            text: await getModelResponse(trimmed),
-          };
-        } catch (modelError) {
-          console.info(
-            "Using the local assistant fallback:",
-            modelError?.response?.data?.detail || modelError.message
-          );
-          response = {
-            text: generateResponse(trimmed),
-          };
-        }
+        response = {
+          text: await getModelResponse(trimmed),
+        };
       }
 
       addMessage(
@@ -1329,18 +1087,7 @@ ${
     setLoading(true);
 
     try {
-      await new Promise(
-        (resolve) =>
-          setTimeout(
-            resolve,
-            300
-          )
-      );
-
-      const response =
-        generateResponse(
-          question
-        );
+      const response = await getModelResponse(question);
 
       addMessage(
         "ai",

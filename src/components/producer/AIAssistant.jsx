@@ -31,6 +31,9 @@ export default function AIAssistant() {
   const [isNegotiating, setIsNegotiating] =
     useState(false);
 
+  const [isChatLoading, setIsChatLoading] =
+    useState(false);
+
   // =========================================================
   // REAL BACKEND DATA
   // =========================================================
@@ -1022,426 +1025,32 @@ ${err.message}
     }
   };
 
-  // =========================================================
-  // LOCAL ENERGY ANSWER
-  //
-  // No fake project data.
-  // Every number comes from backend state.
-  // =========================================================
-
-  const generateResponse = (
-    question
-  ) => {
-
-    const q =
-      question
-        .toLowerCase()
-        .trim();
-
-    // -------------------------------------------------------
-    // BATTERY
-    // -------------------------------------------------------
-
-    if (
-      q.includes("battery") ||
-      q.includes("soc") ||
-      q.includes("stored energy") ||
-      q.includes("available energy") ||
-      q.includes("capacity")
-    ) {
-
-      return `
-Your battery is currently at ${batterySoc.toFixed(
-        1
-      )}%.
-
-You have about ${availableEnergy.toFixed(
-        2
-      )} kWh available out of ${batteryCapacity.toFixed(
-        2
-      )} kWh.
-
-It is currently ${String(
-        batteryState
-      ).toLowerCase()}, and the battery health is ${String(
-        batteryHealth
-      ).toLowerCase()}.
-`;
+  const getModelResponse = async (question, chatHistory) => {
+    const token = localStorage.getItem("energy_marketplace_jwt");
+    if (!token) {
+      throw new Error("Please sign in again to use the AI assistant.");
     }
 
-    // -------------------------------------------------------
-    // SOLAR / PV
-    // -------------------------------------------------------
+    const response = await fetch(`${API}/assistant/chat`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        message: question,
+        history: chatHistory.slice(-8).map((item) => ({
+          role: item.sender === "ai" ? "assistant" : "user",
+          content: item.text,
+        })),
+      }),
+    });
 
-    if (
-      q.includes("solar") ||
-      q.includes("pv") ||
-      q.includes("generation") ||
-      q.includes("producing")
-    ) {
-
-      return `
-Your latest battery-system reading shows ${pvPower.toFixed(
-        2
-      )} watts of PV power.
-
-I won't invent a solar percentage. A percentage needs a defined expected-generation reference, so I'll only show the actual PV reading available from your backend.
-`;
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || !data.answer) {
+      throw new Error(data.detail || "The AI service could not answer right now.");
     }
-
-    // -------------------------------------------------------
-    // BUYING REQUESTS
-    // -------------------------------------------------------
-
-    if (
-      q.includes("request") ||
-      q.includes("buyer") ||
-      q.includes("buyers") ||
-      q.includes("consumer")
-    ) {
-
-      if (
-        pendingRequests.length === 0
-      ) {
-
-        return `
-You currently don't have any pending buying requests.
-`;
-      }
-
-      const details =
-        pendingRequests
-          .map(
-            (request) =>
-              `${request.consumer} is requesting ${Number(
-                request.energy || 0
-              ).toFixed(
-                2
-              )} kWh.`
-          )
-          .join(" ");
-
-      return `
-You currently have ${pendingRequests.length} pending buying requests.
-
-${details}
-
-Together, they are requesting about ${totalRequestedEnergy.toFixed(
-        2
-      )} kWh.
-`;
-    }
-
-    // -------------------------------------------------------
-    // SPECIFIC BUYER
-    // -------------------------------------------------------
-
-    const buyer =
-      findBuyer(q);
-
-    if (buyer) {
-
-      return `
-${buyer.consumer} has a pending request for ${Number(
-        buyer.energy || 0
-      ).toFixed(
-        2
-      )} kWh.
-
-The request status is ${buyer.status}.
-`;
-    }
-
-    // -------------------------------------------------------
-    // MARKET
-    // -------------------------------------------------------
-
-    if (
-      q.includes("market") ||
-      q.includes("price") ||
-      q.includes("selling price")
-    ) {
-
-      if (
-        !Number.isFinite(
-          marketPrice
-        ) ||
-        marketPrice <= 0
-      ) {
-
-        return `
-There isn't enough active market data right now to calculate a reliable market price.
-`;
-      }
-
-      let yourPriceText =
-        "You don't currently have an active listing.";
-
-      if (
-        Number.isFinite(
-          producerPrice
-        )
-      ) {
-
-        yourPriceText =
-          `Your active listings average around ₹${producerPrice.toFixed(
-            2
-          )} per kWh.`;
-      }
-
-      return `
-The current market average is around ₹${marketPrice.toFixed(
-        2
-      )} per kWh.
-
-The current market range is ₹${lowestMarketPrice.toFixed(
-        2
-      )} to ₹${highestMarketPrice.toFixed(
-        2
-      )} per kWh.
-
-${yourPriceText}
-`;
-    }
-
-    // -------------------------------------------------------
-    // SELLING
-    // -------------------------------------------------------
-
-    if (
-      q.includes("sell") ||
-      q.includes("selling")
-    ) {
-
-      if (
-        availableEnergy <= 0
-      ) {
-
-        return `
-You currently have no available battery energy according to the latest battery reading.
-
-I would not recommend planning another energy sale until the available energy changes.
-`;
-      }
-
-      return `
-You currently have about ${availableEnergy.toFixed(
-        2
-      )} kWh available.
-
-There are ${pendingRequests.length} pending requests asking for a combined ${totalRequestedEnergy.toFixed(
-        2
-      )} kWh.
-
-If all pending requests were supplied, the calculated balance would be ${remainingAfterRequests.toFixed(
-        2
-      )} kWh.
-
-So I would review the requests and battery level before deciding how much to sell.
-`;
-    }
-
-    // -------------------------------------------------------
-    // REMAINING ENERGY
-    // -------------------------------------------------------
-
-    if (
-      q.includes("remaining") ||
-      q.includes("left") ||
-      q.includes("after")
-    ) {
-
-      return `
-You currently have about ${availableEnergy.toFixed(
-        2
-      )} kWh available.
-
-Your pending requests total about ${totalRequestedEnergy.toFixed(
-        2
-      )} kWh.
-
-If all of them were supplied, the calculated remaining amount would be ${remainingAfterRequests.toFixed(
-        2
-      )} kWh.
-`;
-    }
-
-    // -------------------------------------------------------
-    // PRIORITY
-    // -------------------------------------------------------
-
-    if (
-      q.includes("priority") ||
-      q.includes("first") ||
-      q.includes("who should")
-    ) {
-
-      if (
-        pendingRequests.length === 0
-      ) {
-
-        return `
-There are currently no pending requests to prioritize.
-`;
-      }
-
-      const ranked =
-        [...pendingRequests]
-          .sort(
-            (a, b) =>
-              Number(
-                b.energy || 0
-              ) -
-              Number(
-                a.energy || 0
-              )
-          );
-
-      return `
-You currently have ${pendingRequests.length} pending requests.
-
-Based only on the current request data, the largest energy request is from ${ranked[0].consumer}, asking for ${Number(
-        ranked[0].energy || 0
-      ).toFixed(
-        2
-      )} kWh.
-
-However, energy amount alone should not be treated as the final priority. A proper priority agent should also consider urgency, purpose, battery availability and other project rules.
-`;
-    }
-
-    // -------------------------------------------------------
-    // HOW MUCH CAN I SELL?
-    // -------------------------------------------------------
-
-    if (
-      q.includes("how much") &&
-      (
-        q.includes("sell") ||
-        q.includes("energy")
-      )
-    ) {
-
-      return `
-You currently have about ${availableEnergy.toFixed(
-        2
-      )} kWh available.
-
-Your pending requests require about ${totalRequestedEnergy.toFixed(
-        2
-      )} kWh.
-
-I would review the requests before deciding the final amount to sell.
-`;
-    }
-
-    // -------------------------------------------------------
-    // MARKET SELLER
-    // -------------------------------------------------------
-
-    if (
-      q.includes("who is selling") ||
-      q.includes("cheapest") ||
-      q.includes("lowest seller") ||
-      q.includes("seller")
-    ) {
-
-      const marketListings =
-        Array.isArray(
-          market?.listings
-        )
-          ? market.listings
-          : [];
-
-      if (
-        marketListings.length === 0
-      ) {
-
-        return `
-There are currently no other active producer listings available in the market data.
-`;
-      }
-
-      const sorted =
-        [...marketListings].sort(
-          (a, b) =>
-            Number(a.price || 0) -
-            Number(b.price || 0)
-        );
-
-      const cheapest =
-        sorted[0];
-
-      return `
-The lowest-priced active producer currently in the market is ${cheapest.producer}, offering energy at ₹${Number(
-        cheapest.price || 0
-      ).toFixed(
-        2
-      )} per kWh.
-
-That listing currently has about ${Number(
-        cheapest.energy || 0
-      ).toFixed(
-        2
-      )} kWh available.
-`;
-    }
-
-    // -------------------------------------------------------
-    // GREETING
-    // -------------------------------------------------------
-
-    if (
-      q === "hi" ||
-      q === "hello" ||
-      q === "hey"
-    ) {
-
-      return `
-Hi ${username}.
-
-I'm your energy assistant.
-
-I can check your live battery, PV power, buying requests, market prices and active listings.
-`;
-    }
-
-    // -------------------------------------------------------
-    // REFRESH
-    // -------------------------------------------------------
-
-    if (
-      q.includes("refresh") ||
-      q.includes("update data") ||
-      q.includes("latest data")
-    ) {
-
-      loadAssistantData();
-
-      return `
-I'm refreshing the latest battery, trading and market information now.
-`;
-    }
-
-    // -------------------------------------------------------
-    // FALLBACK
-    // -------------------------------------------------------
-
-    return `
-I can answer questions using the live data currently available from your energy system.
-
-Try asking:
-
-• How much battery energy do I have?
-• Who is asking to buy?
-• How much energy are they requesting?
-• What's the current market price?
-• Who is selling at the lowest price?
-• How much energy will remain after the requests?
-• How much PV power are we producing?
-• Should I sell now?
-• Who should I prioritize?
-`;
+    return data.answer;
   };
 
   // =========================================================
@@ -1452,7 +1061,7 @@ Try asking:
 
     const question = input.trim();
 
-    if (!question || isNegotiating) {
+    if (!question || isNegotiating || isChatLoading) {
       return;
     }
 
@@ -1462,6 +1071,7 @@ Try asking:
       text: question
     };
 
+    const chatHistory = messages;
     setMessages((previous) => [
       ...previous,
       userMessage
@@ -1469,22 +1079,29 @@ Try asking:
 
     setInput("");
 
-    let answer;
+    try {
+      setIsChatLoading(true);
+      const answer = isNegotiationMessage(question)
+        ? await runNaturalLanguageNegotiation(question)
+        : await getModelResponse(question, chatHistory);
 
-    if (isNegotiationMessage(question)) {
-      answer = await runNaturalLanguageNegotiation(question);
-    } else {
-      answer = generateResponse(question);
+      setMessages((previous) => [
+        ...previous,
+        { id: Date.now() + 1, sender: "ai", text: answer }
+      ]);
+    } catch (error) {
+      console.error("Producer AI chat error:", error);
+      setMessages((previous) => [
+        ...previous,
+        {
+          id: Date.now() + 1,
+          sender: "ai",
+          text: error.message || "The AI service could not answer right now.",
+        }
+      ]);
+    } finally {
+      setIsChatLoading(false);
     }
-
-    setMessages((previous) => [
-      ...previous,
-      {
-        id: Date.now() + 1,
-        sender: "ai",
-        text: answer
-      }
-    ]);
   };
 
   // =========================================================
@@ -3002,8 +2619,18 @@ Try asking:
                   <p>
                     Make sure your FastAPI
                     backend is running and
-                    try refreshing the page.
+                    then retry the connection.
                   </p>
+
+                  <button
+                    type="button"
+                    className="briefing-button"
+                    onClick={loadAssistantData}
+                    disabled={loading}
+                    style={{ marginTop: 8 }}
+                  >
+                    {loading ? "Retrying..." : "Retry connection"}
+                  </button>
 
                 </div>
 

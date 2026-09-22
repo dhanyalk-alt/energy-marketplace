@@ -1,12 +1,17 @@
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.orm import declarative_base, sessionmaker
 
-DATABASE_URL = "postgresql+asyncpg://postgres:123456789@localhost:5432/energyLogin_db"
+# This project already uses PostgreSQL. Do not silently switch to SQLite: that
+# requires an additional driver and starts the application with an empty,
+# different database. Deployments may override this through DATABASE_URL.
+DATABASE_URL = "postgresql+asyncpg://postgres:xxxxxxxxx/energyLogin_db"
 
 # Create Engine
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True
+    echo=False,
+    connect_args={"timeout": 10},
+    pool_pre_ping=True,
 )
 
 # Create Session
