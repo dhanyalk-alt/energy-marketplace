@@ -91,13 +91,15 @@ class TransactionResponse(BaseModel):
     id: int
     producer: str
     consumer: str
-    listing_id: int
-    request_id: int
+    listing_id: int | None = None
+    # The existing transactions table has no request_id column. Retain this
+    # response key for frontend compatibility.
+    request_id: int | None = None
     energy: float
     price: float
     total_amount: float
-    status: str
-    created_at: datetime
+    status: str | None = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True
