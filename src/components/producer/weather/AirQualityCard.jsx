@@ -4,9 +4,19 @@ import { getAQILevel, getAQIColor } from "./constants";
 function AirQualityCard({ weather }) {
   if (!weather) return null;
 
-  const epaIndex = weather.current.air_quality["us-epa-index"];
+  const airQuality = weather?.current?.air_quality;
+  const epaIndex = Number(airQuality?.["us-epa-index"]);
+  const pm25 = Number(airQuality?.pm2_5);
 
-  const pm25 = weather.current.air_quality.pm2_5.toFixed(1);
+  if (!Number.isFinite(epaIndex) || !Number.isFinite(pm25)) {
+    return (
+      <div className="aq-card">
+        <div className="aq-header">🌫 Air Quality</div>
+        <div className="aq-status">Unavailable</div>
+        <div className="aq-value">The weather provider did not return air-quality data.</div>
+      </div>
+    );
+  }
 
   return (
     <div className="aq-card">
@@ -25,7 +35,7 @@ function AirQualityCard({ weather }) {
       </div>
 
       <div className="aq-value">
-        PM2.5 : {pm25}
+        PM2.5 : {pm25.toFixed(1)}
       </div>
 
       <div className="aq-bar">

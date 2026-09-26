@@ -19,9 +19,10 @@ from app.routers import (
 )
 from app.routers.assistant import router as assistant_router
 from app.routers.producer_insights import router as producer_insights_router
+from app.routers.weather import router as weather_router
 
 from app.battery_router import router as battery_router
-from app.ai_config import validate_openai_configuration
+from app.ai_config import get_ai_provider, validate_gemini_configuration
 
 
 # Create FastAPI app
@@ -37,7 +38,7 @@ app = FastAPI(
 @app.on_event("startup")
 async def startup():
 
-    validate_openai_configuration()
+    validate_gemini_configuration()
 
     async with engine.begin() as conn:
         await conn.run_sync(
@@ -104,22 +105,27 @@ app.include_router(
     market_router
 )
 
+app.include_router(weather_router)
+
 
 @app.middleware("http")
 async def enforce_request_timeout(
     request: Request,
     call_next,
 ):
+    # A local CPU model can take longer than ordinary API/database requests on
+    # its first response. Keep the existing 25-second guard everywhere else.
+    timeout = 90 if request.url.path == "/assistant/chat" and get_ai_provider() == "ollama" else 25
     try:
         return await asyncio.wait_for(
             call_next(request),
-            timeout=25,
+            timeout=timeout,
         )
     except TimeoutError:
         return JSONResponse(
             status_code=504,
             content={
-                "detail": "The request exceeded the 25-second limit."
+                "detail": f"The request exceeded the {timeout}-second limit."
             },
         )
 

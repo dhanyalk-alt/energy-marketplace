@@ -1,0 +1,62 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@600;700&display=swap");
+
+.energix-auth-page {
+  --ink: #20201e;
+  --muted: #625d53;
+  --cream: #e8dfca;
+  --paper: #f9f5e9;
+  --gold: #f7c843;
+  --orange: #eea91d;
+  --error: #b42318;
+  min-height: 100svh;
+  width: 100vw;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  position: relative;
+  isolation: isolate;
+  margin-left: calc(50% - 50vw);
+  padding: 42px clamp(24px, 4vw, 72px);
+  box-sizing: border-box;
+  color: var(--ink);
+  background: var(--cream);
+  font-family: "DM Sans", system-ui, sans-serif;
+}
+
+.energix-auth-page *, .energix-auth-page *::before, .energix-auth-page *::after { box-sizing: border-box; }
+.energix-auth-shell { width: min(1320px, 100%); position: relative; z-index: 1; }
+.energix-brand { text-align: center; margin: 0 auto 30px; }
+.energix-bolt { display: inline-grid; place-items: center; width: 44px; height: 44px; margin-bottom: 8px; border-radius: 14px; color: var(--ink); background: var(--gold); box-shadow: 4px 4px 0 var(--ink); }
+.energix-brand h1, .energix-form-heading h2 { font-family: "Space Grotesk", sans-serif; color: var(--ink); }
+.energix-brand h1 { font-size: clamp(2.4rem, 4vw, 3.9rem); letter-spacing: -.08em; line-height: .95; margin: 0; }
+.energix-brand p { color: var(--muted); font-size: .98rem; margin: 12px 0 0; }
+
+.energix-auth-grid { display: grid; grid-template-columns: minmax(360px, 1.05fr) minmax(460px, .95fr); align-items: stretch; min-height: 640px; overflow: hidden; border: 2px solid var(--ink); border-radius: 32px; background: var(--paper); box-shadow: 12px 13px 0 rgba(32, 32, 30, .22); }
+.energix-illustration { position: relative; min-height: 100%; overflow: hidden; padding: 50px; background: #d8cdb6; border-right: 2px solid var(--ink); }
+.energix-sun { position: absolute; width: 230px; height: 230px; right: -55px; top: -55px; border: 2px solid var(--ink); border-radius: 50%; background: var(--gold); }
+.energix-sun span { position: absolute; inset: 26px; border: 2px dashed var(--ink); border-radius: inherit; }
+.energix-panel { width: 285px; aspect-ratio: 1.32; position: absolute; left: 54px; bottom: 118px; z-index: 1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; padding: 13px; background: #394555; border: 3px solid var(--ink); box-shadow: 11px 11px 0 var(--ink); transform: rotate(-9deg); }
+.energix-panel::after { content: ""; position: absolute; width: 6px; height: 85px; background: var(--ink); left: 32px; bottom: -86px; box-shadow: 190px 0 var(--ink); }
+.energix-panel i { border: 1px solid #233140; background: #83b6cd; }
+.energix-energy-card { position: absolute; z-index: 2; right: 43px; bottom: 48px; width: 220px; padding: 18px; border: 2px solid var(--ink); border-radius: 18px; color: var(--ink); background: #fffdf5; box-shadow: 6px 6px 0 var(--ink); transform: rotate(5deg); }
+.energix-energy-card span { display: inline-grid; place-items: center; height: 30px; width: 30px; border-radius: 8px; background: var(--gold); }
+.energix-energy-card strong, .energix-energy-card small { display: block; }
+.energix-energy-card strong { margin-top: 8px; font-size: .94rem; }
+.energix-energy-card small { margin-top: 4px; color: var(--muted); font-size: .76rem; }
+.energix-leaf { position: absolute; width: 130px; height: 54px; border: 2px solid var(--ink); background: #7a9d59; border-radius: 90% 0 90% 0; }
+.energix-leaf-left { left: -35px; bottom: 55px; transform: rotate(25deg); }.energix-leaf-right { right: -45px; top: 260px; transform: rotate(-35deg); }
+
+.energix-form-card { display: flex; flex-direction: column; justify-content: center; padding: 52px clamp(44px, 6vw, 86px); background: #fcf9ef; }
+.energix-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; width: min(100%, 310px); margin: 0 auto 31px; border: 1px solid #bab09b; border-radius: 999px; background: #eae2ce; }
+.energix-tabs button { border: 0; padding: 11px; border-radius: inherit; color: var(--muted); background: transparent; cursor: pointer; font: 700 .9rem "DM Sans", sans-serif; letter-spacing: .06em; text-transform: uppercase; }.energix-tabs button.active { color: var(--ink); background: var(--gold); box-shadow: 2px 2px 0 var(--ink); }
+.energix-form-heading { text-align: center; margin-bottom: 32px; }.energix-form-heading p { margin: 0 0 8px; color: #8c6c21; font-size: .88rem; font-weight: 700; letter-spacing: .15em; }.energix-form-heading h2 { margin: 0; font-size: clamp(2.3rem, 3.4vw, 3rem); letter-spacing: -.06em; }
+.energix-form-card form { display: grid; gap: 21px; }.energix-field { text-align: left; }.energix-field label, .energix-role-fieldset legend { display: block; color: #454139; margin: 0 0 9px; font-size: 1.12rem; font-weight: 700; }
+.energix-input-shell { display: flex; align-items: center; gap: 13px; height: 58px; padding: 0 18px; border: 1.5px solid #8b8373; border-radius: 15px; background: #fffdf7; transition: border-color .2s, box-shadow .2s; }.energix-input-shell:focus-within, .energix-field select:focus { outline: 0; border-color: var(--ink); box-shadow: 3px 3px 0 var(--gold); }.energix-input-shell.has-error { border-color: var(--error); }.energix-input-shell svg { flex: 0 0 auto; color: #926f1d; }
+.energix-input-shell input { width: 100%; min-width: 0; border: 0; outline: 0; color: var(--ink); background: transparent; font: 500 1.14rem "DM Sans", sans-serif; }.energix-input-shell input::placeholder { color: #999183; }.energix-field select { width: 100%; height: 58px; padding: 0 18px; border: 1.5px solid #8b8373; border-radius: 15px; color: var(--ink); background: #fffdf7; font: 500 1.14rem "DM Sans", sans-serif; cursor: pointer; }
+.energix-field-error, .energix-form-error, .energix-success { margin: 6px 0 0; font-size: .88rem; font-weight: 600; }.energix-field-error, .energix-form-error { color: var(--error); }.energix-form-error { margin: -3px 0 0; text-align: center; }.energix-success { color: #287437; text-align: center; }
+.energix-password-requirements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; padding: 0; margin: 10px 0 0; list-style: none; color: #6d6559; font-size: .86rem; font-weight: 600; }.energix-password-requirements li { display: flex; align-items: center; gap: 5px; }.energix-password-requirements li span { font-weight: 800; }.energix-password-requirements .met { color: #287437; }.energix-password-requirements .unmet { color: var(--error); }
+.energix-role-fieldset { margin: 0; padding: 0; border: 0; text-align: left; }.energix-role-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }.energix-role-options button { display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-height: 52px; padding: 9px; border: 1.5px solid #8b8373; border-radius: 14px; color: #565044; background: #fffdf7; cursor: pointer; font: 700 .88rem "DM Sans", sans-serif; }.energix-role-options button.selected { border-color: var(--ink); color: var(--ink); background: #ffe490; box-shadow: 3px 3px 0 var(--ink); }
+.energix-submit { min-height: 58px; margin-top: 9px; border: 2px solid var(--ink); border-radius: 999px; color: var(--ink); background: var(--gold); box-shadow: 4px 4px 0 var(--ink); cursor: pointer; font: 700 1.12rem "DM Sans", sans-serif; letter-spacing: .12em; }.energix-submit:hover:not(:disabled) { background: #ffda60; transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--ink); }.energix-submit:disabled { cursor: not-allowed; opacity: .65; }
+.energix-orbit { position: fixed; z-index: -1; border: 2px solid rgba(32, 32, 30, .12); border-radius: 50%; }.energix-orbit-one { width: 450px; height: 450px; left: -240px; top: -130px; }.energix-orbit-two { width: 320px; height: 320px; right: -170px; bottom: -130px; }
+
+@media (max-width: 760px) { .energix-auth-page { padding: 28px 16px; overflow: auto; align-items: start; }.energix-brand { margin-bottom: 22px; }.energix-brand p { font-size: .88rem; }.energix-auth-grid { display: block; min-height: 0; border-radius: 24px; }.energix-illustration { display: none; }.energix-form-card { padding: 32px 24px; }.energix-tabs { margin-bottom: 25px; }.energix-role-options, .energix-password-requirements { grid-template-columns: 1fr; }.energix-field label, .energix-role-fieldset legend { font-size: .94rem; }.energix-input-shell, .energix-field select, .energix-submit { min-height: 56px; height: auto; }.energix-input-shell input, .energix-field select { font-size: 1rem; } }

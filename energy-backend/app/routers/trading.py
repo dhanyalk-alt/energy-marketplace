@@ -6,6 +6,8 @@ from fastapi import (
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
+import logging
 
 from app.database import get_db
 from app.dependencies import get_current_user
@@ -60,6 +62,8 @@ router = APIRouter(
     tags=["Trading"],
 )
 
+logger = logging.getLogger(__name__)
+
 
 # =========================================================
 # TEST API
@@ -91,12 +95,20 @@ async def add_trading(
 
         return new_trade
 
+    except IntegrityError:
+        await db.rollback()
+        logger.exception("Database integrity error while accepting buy request %s", id)
+        raise HTTPException(
+            status_code=409,
+            detail="The buy request could not be completed because its trade data is no longer valid. Refresh and try again.",
+        )
+
     except Exception as e:
         await db.rollback()
-
+        logger.exception("Unexpected error while accepting buy request %s", id)
         raise HTTPException(
-            status_code=400,
-            detail=str(e),
+            status_code=500,
+            detail="The buy request could not be completed. Please try again.",
         )
 
 
@@ -142,12 +154,19 @@ async def buy_listing(
     except HTTPException:
         raise
 
-    except Exception as e:
+    except IntegrityError:
         await db.rollback()
-
+        logger.exception("Database integrity error while accepting buy request %s", id)
         raise HTTPException(
-            status_code=400,
-            detail=str(e),
+            status_code=409,
+            detail="The buy request could not be completed because its trade data is no longer valid. Refresh and try again.",
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error while accepting buy request %s", id)
+        raise HTTPException(
+            status_code=500,
+            detail="The buy request could not be completed. Please try again.",
         )
 
 
@@ -239,12 +258,19 @@ async def accept(
     except HTTPException:
         raise
 
-    except Exception as e:
+    except IntegrityError:
         await db.rollback()
-
+        logger.exception("Database integrity error while accepting buy request %s", id)
         raise HTTPException(
-            status_code=400,
-            detail=str(e),
+            status_code=409,
+            detail="The buy request could not be completed because its trade data is no longer valid. Refresh and try again.",
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error while accepting buy request %s", id)
+        raise HTTPException(
+            status_code=500,
+            detail="The buy request could not be completed. Please try again.",
         )
 
 
@@ -500,21 +526,12 @@ async def negotiate_energy(
         if market_price <= 0:
             market_price = producer_price
 
-        battery_data = get_available_battery_energy()
-        available_battery_energy = float(
-            battery_data.get(
-                "available_energy_kwh",
-                0,
-            )
-        )
-
-        if available_battery_energy > 0:
-            available_energy = min(
-                available_listing_energy,
-                available_battery_energy,
-            )
-        else:
-            available_energy = available_listing_energy
+        # A marketplace listing is the committed sale inventory. Battery SOC
+        # is useful to the producer's AI recommendation, but it must not
+        # silently reduce the amount a consumer can negotiate for a listing.
+        # The listing-level validation above is the authoritative availability
+        # check and is rechecked again when the producer accepts.
+        available_energy = available_listing_energy
 
         result = calculate_negotiation_price(
             producer_price=producer_price,
@@ -1010,17 +1027,11 @@ async def producer_accept_negotiation(
             raise HTTPException(status_code=403, detail="Only the producer can accept this negotiation.")
 
         if negotiation.status == "Accepted":
-            producer_id = await db.scalar(
-                select(User.id).where(User.username == negotiation.producer)
-            )
-            consumer_id = await db.scalar(
-                select(User.id).where(User.username == negotiation.consumer)
-            )
             result = await db.execute(
                 select(Transaction)
                 .where(
-                    Transaction.producer_id == producer_id,
-                    Transaction.consumer_id == consumer_id,
+                    Transaction.producer == negotiation.producer,
+                    Transaction.consumer == negotiation.consumer,
                 )
                 .order_by(Transaction.id.desc())
             )
@@ -1075,21 +1086,12 @@ async def producer_accept_negotiation(
 
         negotiation.status = "Accepted"
 
-        producer_id = await db.scalar(
-            select(User.id).where(User.username == negotiation.producer)
-        )
-        consumer_id = await db.scalar(
-            select(User.id).where(User.username == negotiation.consumer)
-        )
-        if producer_id is None or consumer_id is None:
-            raise HTTPException(status_code=400, detail="Transaction user was not found.")
-
         transaction = Transaction(
-            producer_id=producer_id,
-            consumer_id=consumer_id,
-            listing_id=None,
-            energy_kwh=negotiation.energy,
-            price_per_kwh=negotiation.negotiated_price,
+            producer=negotiation.producer,
+            consumer=negotiation.consumer,
+            listing_id=negotiation.listing_id,
+            energy=negotiation.energy,
+            price=negotiation.negotiated_price,
             total_amount=total_amount,
             status="Completed",
         )
@@ -1120,9 +1122,23 @@ async def producer_accept_negotiation(
     except HTTPException:
         await db.rollback()
         raise
-    except Exception as e:
+    except IntegrityError:
         await db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.exception(
+            "Database integrity error while accepting negotiation %s",
+            negotiation_id,
+        )
+        raise HTTPException(
+            status_code=409,
+            detail="The negotiation could not be completed because its trade data is no longer valid. Refresh and try again.",
+        )
+    except Exception:
+        await db.rollback()
+        logger.exception("Unexpected error while accepting negotiation %s", negotiation_id)
+        raise HTTPException(
+            status_code=500,
+            detail="The negotiation could not be completed. Please try again.",
+        )
 
 
 

@@ -1,20 +1,20 @@
 import axios from "axios";
+import { API_BASE_URL } from "../../../config";
 
-const API_KEY = "174cde1baa4845e4a5564559261807"; // Replace with your actual WeatherAPI key  
-
-const BASE_URL = "https://api.weatherapi.com/v1";
 export const getWeatherData = async (latitude, longitude) => {
   try {
     const response = await axios.get(
-      `${BASE_URL}/forecast.json`,
+      `${API_BASE_URL}/weather/forecast`,
       {
         params: {
-          key: API_KEY,
-          q: `${latitude},${longitude}`,
+          latitude,
+          longitude,
           days: 7,
-          aqi: "yes",
-          alerts: "yes",
         },
+        headers: (() => {
+          const token = localStorage.getItem("energy_marketplace_jwt");
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })(),
       }
     );
 

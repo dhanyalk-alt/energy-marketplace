@@ -5,8 +5,8 @@ import logging
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.assistant_context_service import build_assistant_context
 from app.assistant_service import AssistantServiceError, generate_assistant_response
+from app.assistant_tools import AssistantToolExecutor
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.schemas import AssistantChatRequest, AssistantChatResponse
@@ -25,11 +25,15 @@ async def chat(
     user: dict = Depends(get_current_user),
 ):
     try:
-        context = await build_assistant_context(db, user)
+        # The executor exposes a small, safe set of read-only marketplace tools to
+        # Gemini.  It deliberately receives only the authenticated user and the
+        # location explicitly shared in this chat request.
+        location = request.location.model_dump() if request.location else None
+        tool_executor = AssistantToolExecutor(db, user, location)
         answer = await generate_assistant_response(
             request.message,
-            context,
             [turn.model_dump() for turn in request.history],
+            tool_executor.execute,
         )
         return {"answer": answer}
     except AssistantServiceError as error:

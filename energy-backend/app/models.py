@@ -167,32 +167,27 @@ class Transaction(Base):
         index=True,
     )
 
-    producer_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
+    # The existing PostgreSQL table stores account names directly. Keep this
+    # mapping aligned with that production schema rather than creating a
+    # second incompatible transaction representation.
+    producer = Column(String, nullable=False)
 
-    consumer_id = Column(
-        Integer,
-        ForeignKey("users.id"),
-        nullable=False,
-    )
+    consumer = Column(String, nullable=False)
 
     listing_id = Column(
         Integer,
-        # The live database references its legacy energy_listings table.
-        # Do not declare a SQLAlchemy ForeignKey here because that legacy table
-        # is not part of this application's metadata.
-        nullable=True,
+        # This is required by the live transactions table and references the
+        # marketplace listing that supplied the completed energy trade.
+        ForeignKey("trading.id"),
+        nullable=False,
     )
 
-    energy_kwh = Column(
+    energy = Column(
         Float,
         nullable=False,
     )
 
-    price_per_kwh = Column(
+    price = Column(
         Float,
         nullable=False,
     )

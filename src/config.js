@@ -1,5 +1,7 @@
 import axios from "axios";
 
+// The local FastAPI server runs on port 8000. A VITE_API_BASE_URL value still
+// takes precedence for deployments or a different local setup.
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:8000";
 export const REQUEST_TIMEOUT_MS = 25000;
 

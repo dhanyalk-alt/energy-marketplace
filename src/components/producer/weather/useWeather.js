@@ -12,9 +12,54 @@ const [longitude, setLongitude] = useState(null);
 
   useEffect(() => {
     fetchWeather();
+
+    // Keep the existing Forecasting screen current after it is opened. Once
+    // permission has been granted, the browser supplies a fresh location so a
+    // user who moves to another area sees that area's weather.
+    const refreshId = window.setInterval(() => {
+      fetchWeather();
+    }, 5 * 60 * 1000);
+
+    return () => window.clearInterval(refreshId);
   }, []);
 
   const fetchWeather = () => {
+    const loadWeather = async (lat, lon) => {
+      try {
+        setLoading(true);
+        setError("");
+        setLatitude(lat);
+        setLongitude(lon);
+
+        const weatherData = await getWeatherData(lat, lon);
+        const locationData = await getLocationName(lat, lon);
+
+        setWeather(weatherData);
+        localStorage.setItem(
+          "energy_marketplace_weather",
+          JSON.stringify(weatherData)
+        );
+
+        setPlace({
+          village:
+            locationData.address.village ||
+            locationData.address.suburb ||
+            locationData.address.neighbourhood ||
+            locationData.address.hamlet ||
+            locationData.address.town ||
+            locationData.address.city,
+          state:
+            locationData.address.state ||
+            weatherData.location.region,
+        });
+      } catch (err) {
+        console.error("Weather Fetch Error:", err);
+        setError("Unable to fetch weather data.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     if (!navigator.geolocation) {
       setError("Geolocation is not supported.");
       setLoading(false);
@@ -22,48 +67,7 @@ const [longitude, setLongitude] = useState(null);
     }
 
     navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        try {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-setLatitude(lat);
-setLongitude(lon);
-          // Fetch weather data
-          const weatherData = await getWeatherData(lat, lon);
-
-          // Fetch location name
-          const locationData = await getLocationName(lat, lon);
-
-          setWeather(weatherData);
-
-          // The producer assistant reads this same live forecast to keep its
-          // solar and trading recommendation grounded in the weather screen.
-          localStorage.setItem(
-            "energy_marketplace_weather",
-            JSON.stringify(weatherData)
-          );
-
-setPlace({
-  village:
-   locationData.address.village ||
-locationData.address.suburb ||
-locationData.address.neighbourhood ||
-locationData.address.hamlet ||
-locationData.address.city,
-   
-
-  state:
-    locationData.address.state ||
-    weatherData.location.region,
-});
-
-          setLoading(false);
-        } catch (err) {
-          console.error("Weather Fetch Error:", err);
-          setError("Unable to fetch weather data.");
-          setLoading(false);
-        }
-      },
+      (position) => loadWeather(position.coords.latitude, position.coords.longitude),
       (err) => {
         console.error("Location Error:", err);
         setError("Location permission denied.");

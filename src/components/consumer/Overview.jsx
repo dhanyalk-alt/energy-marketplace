@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { API_BASE_URL } from "../../config";
 import {
+  buildPeriodAnalytics,
+  TimeRangeSelect,
+} from "../overview/TransactionAnalytics";
+import {
   LineChart,
   Line,
   XAxis,
@@ -152,6 +156,7 @@ export default function Overview() {
 
   const [transactions, setTransactions] = useState([]);
   const [marketListings, setMarketListings] = useState([]);
+  const [analyticsRange, setAnalyticsRange] = useState("Month");
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -267,28 +272,14 @@ export default function Overview() {
     );
 
   // ----------------------------------------------------------
-  // PRICE HISTORY
+  // SPENDING ANALYTICS
   // ----------------------------------------------------------
 
-  const priceData = [
-    ...completedTransactions,
-  ]
-    .reverse()
-    .slice(-7)
-    .map((transaction, index) => ({
-      purchase: `Purchase ${index + 1}`,
-      price: Number(transaction.price || 0),
-    }));
-
-  const chartData =
-    priceData.length > 0
-      ? priceData
-      : [
-          {
-            purchase: "No data",
-            price: 0,
-          },
-        ];
+  const spendingAnalytics = buildPeriodAnalytics(
+    completedTransactions,
+    analyticsRange
+  );
+  const chartData = spendingAnalytics.chartData;
 
   // ----------------------------------------------------------
   // MARKET STATUS
@@ -514,7 +505,7 @@ export default function Overview() {
 
       <div className="ov-split">
 
-        {/* PRICE CHART */}
+        {/* SPENDING CHART */}
 
         <div
           style={{
@@ -529,39 +520,73 @@ export default function Overview() {
             style={{
               display: "flex",
               alignItems: "center",
+              justifyContent: "space-between",
               gap: 10,
+              flexWrap: "wrap",
               marginBottom: 18,
             }}
           >
-            <span
-              style={{
-                width: 9,
-                height: 9,
-                borderRadius: "50%",
-                background: colors.cyan,
-                animation:
-                  "pulse 1.8s infinite",
-              }}
-            />
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  background: colors.cyan,
+                  animation: "pulse 1.8s infinite",
+                }}
+              />
 
-            <h2
-              style={{
-                fontFamily:
-                  "Space Grotesk, sans-serif",
-                fontSize: 17,
-                fontWeight: 600,
-                color: colors.text,
-                margin: 0,
-              }}
-            >
-              Purchase Price History
-            </h2>
+              <div>
+                <h2
+                  style={{
+                    fontFamily: "Space Grotesk, sans-serif",
+                    fontSize: 17,
+                    fontWeight: 600,
+                    color: colors.text,
+                    margin: 0,
+                  }}
+                >
+                  Spending Analytics
+                </h2>
+                <p style={{ color: colors.textMuted, fontSize: 12, margin: "4px 0 0" }}>
+                  Completed purchases in the current {analyticsRange.toLowerCase()}.
+                </p>
+              </div>
+            </div>
+
+            <TimeRangeSelect
+              value={analyticsRange}
+              onChange={setAnalyticsRange}
+              accent={colors.cyan}
+              text={colors.text}
+              muted={colors.textMuted}
+              border={colors.border}
+              surface={colors.surfaceAlt}
+            />
           </div>
 
-          <ResponsiveContainer
-            width="100%"
-            height={280}
-          >
+          <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginBottom: 18 }}>
+            <div>
+              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Money Spent
+              </div>
+              <strong style={{ color: colors.violet, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
+                ₹{spendingAnalytics.summary.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </strong>
+            </div>
+            <div>
+              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Energy Purchased
+              </div>
+              <strong style={{ color: colors.cyan, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
+                {spendingAnalytics.summary.energy.toFixed(2)} kWh
+              </strong>
+            </div>
+          </div>
+
+          {chartData.length > 0 ? (
+          <ResponsiveContainer width="100%" height={280}>
             <LineChart data={chartData}>
 
               <CartesianGrid
@@ -570,7 +595,7 @@ export default function Overview() {
               />
 
               <XAxis
-                dataKey="purchase"
+                dataKey="label"
                 stroke={colors.textMuted}
                 tick={{
                   fill: colors.textMuted,
@@ -604,13 +629,14 @@ export default function Overview() {
                 }}
                 formatter={(value) => [
                   `₹${Number(value).toFixed(2)}`,
-                  "Price / kWh",
+                  "Spending",
                 ]}
               />
 
               <Line
                 type="monotone"
-                dataKey="price"
+                dataKey="amount"
+                name="Spending"
                 stroke={colors.cyan}
                 strokeWidth={3}
                 dot={{
@@ -625,6 +651,20 @@ export default function Overview() {
 
             </LineChart>
           </ResponsiveContainer>
+          ) : (
+            <div
+              style={{
+                height: 280,
+                display: "grid",
+                placeItems: "center",
+                textAlign: "center",
+                color: colors.textMuted,
+                fontSize: 13,
+              }}
+            >
+              No data available for this period.
+            </div>
+          )}
 
           {completedTransactions.length === 0 && (
             <div
@@ -635,9 +675,8 @@ export default function Overview() {
                 marginTop: -15,
               }}
             >
-              Your purchase price history will
-              appear here after your first
-              completed purchase.
+              Your spending analytics will appear
+              here after your first completed purchase.
             </div>
           )}
         </div>

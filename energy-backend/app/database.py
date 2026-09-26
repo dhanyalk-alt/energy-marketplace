@@ -4,7 +4,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 # This project already uses PostgreSQL. Do not silently switch to SQLite: that
 # requires an additional driver and starts the application with an empty,
 # different database. Deployments may override this through DATABASE_URL.
-DATABASE_URL = "postgresql+asyncpg://postgres:xxxxxxxxx/energyLogin_db"
+DATABASE_URL = "postgresql+asyncpg://postgres:enter_your_password@localhost:5432/energyLogin_db"
 
 # Create Engine
 engine = create_async_engine(

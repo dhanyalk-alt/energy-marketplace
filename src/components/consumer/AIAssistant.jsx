@@ -64,6 +64,7 @@ export default function AIAssistant() {
   const [producers, setProducers] = useState([]);
   const [negotiations, setNegotiations] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [sharedLocation, setSharedLocation] = useState(null);
   const negotiationStatuses = useRef(new Map());
   const hasLoadedNegotiations = useRef(false);
 
@@ -184,6 +185,7 @@ export default function AIAssistant() {
       `${API_BASE}/assistant/chat`,
       {
         message: question,
+        location: sharedLocation || undefined,
         history: messages
           .slice(-8)
           .filter((item) => item.type === "user" || item.type === "ai")
@@ -200,6 +202,25 @@ export default function AIAssistant() {
     );
 
     return response.data.answer;
+  };
+
+  const shareLocation = () => {
+    if (!navigator.geolocation) {
+      addMessage("ai", "Location sharing is not supported by this browser.");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setSharedLocation({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        });
+        addMessage("ai", "📍 Location shared for this chat. I can now check local weather and nearby solar businesses.");
+      },
+      () => addMessage("ai", "I could not access your location. You can still ask marketplace questions without it."),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
   };
 
   // ============================================================
@@ -1061,7 +1082,8 @@ ${
 
       addMessage(
         "ai",
-        "Something went wrong while processing your request."
+        error.response?.data?.detail ||
+          "The AI assistant could not generate a response. Please try again."
       );
     } finally {
       setLoading(false);
@@ -1458,6 +1480,23 @@ ${
             colors.surfaceAlt,
         }}
       >
+        <button
+          type="button"
+          onClick={shareLocation}
+          disabled={loading}
+          title={sharedLocation ? "Location shared for this chat" : "Share location for local weather and nearby businesses"}
+          style={{
+            border: `1px solid ${colors.border}`,
+            borderRadius: "7px",
+            padding: "0 9px",
+            background: sharedLocation ? "rgba(95,217,138,0.14)" : colors.surface,
+            color: sharedLocation ? colors.green : colors.textMuted,
+            cursor: loading ? "not-allowed" : "pointer",
+            fontSize: "12px",
+          }}
+        >
+          📍
+        </button>
         <input
           className="energy-ai-input"
           value={message}

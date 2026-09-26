@@ -192,11 +192,18 @@ class AssistantChatTurn(BaseModel):
     content: str = Field(..., min_length=1, max_length=4000)
 
 
+class AssistantLocation(BaseModel):
+    """Ephemeral browser location supplied only after the user grants consent."""
+    latitude: float = Field(..., ge=-90, le=90)
+    longitude: float = Field(..., ge=-180, le=180)
+
+
 class AssistantChatRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
     # Short conversational context improves follow-up questions. Marketplace
     # data itself is always reloaded on the server from the authenticated user.
     history: list[AssistantChatTurn] = Field(default_factory=list, max_length=12)
+    location: AssistantLocation | None = None
 
 
 class AssistantChatResponse(BaseModel):

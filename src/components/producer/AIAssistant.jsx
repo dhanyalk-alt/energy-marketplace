@@ -34,6 +34,9 @@ export default function AIAssistant() {
   const [isChatLoading, setIsChatLoading] =
     useState(false);
 
+  const [sharedLocation, setSharedLocation] =
+    useState(null);
+
   // =========================================================
   // REAL BACKEND DATA
   // =========================================================
@@ -442,6 +445,41 @@ export default function AIAssistant() {
   const nowRecommendation =
     insights?.what_to_do_now || null;
 
+  const displayName = username
+    ? `${username.charAt(0).toUpperCase()}${username.slice(1)}`
+    : "Producer";
+
+  const weatherSnapshot = useMemo(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("energy_marketplace_weather") || "{}"
+      );
+    } catch {
+      return {};
+    }
+  }, [showBriefing]);
+
+  const weatherCondition =
+    weatherSnapshot?.current?.condition?.text ||
+    weatherSnapshot?.current?.condition ||
+    "Weather information unavailable";
+
+  const weatherIcon = useMemo(() => {
+    const condition = String(weatherCondition).toLowerCase();
+    if (condition.includes("thunder") || condition.includes("storm")) return "⛈️";
+    if (condition.includes("rain") || condition.includes("drizzle")) return "🌧️";
+    if (condition.includes("cloud") || condition.includes("overcast")) return "☁️";
+    if (condition.includes("partly")) return "🌤️";
+    if (condition.includes("sun") || condition.includes("clear")) return "☀️";
+    return "🌤️";
+  }, [weatherCondition]);
+
+  const conciseRecommendationReason = useMemo(() => {
+    const explanation = nowRecommendation?.explanation || "";
+    const firstSentence = explanation.match(/^.*?[.!?](?:\s|$)/)?.[0];
+    return firstSentence || "Live energy and market information is still being evaluated.";
+  }, [nowRecommendation]);
+
   // =========================================================
   // ENERGY AFTER ALL PENDING REQUESTS
   // =========================================================
@@ -716,6 +754,11 @@ I'll keep these numbers based on the live data available from your system.
     setIsSpeaking(false);
 
     setShowBriefing(false);
+  };
+
+  const handleOpenBriefing = () => {
+    setShowBriefing(true);
+    loadAssistantData();
   };
 
   // =========================================================
@@ -1039,6 +1082,7 @@ ${err.message}
       },
       body: JSON.stringify({
         message: question,
+        location: sharedLocation || undefined,
         history: chatHistory.slice(-8).map((item) => ({
           role: item.sender === "ai" ? "assistant" : "user",
           content: item.text,
@@ -1051,6 +1095,31 @@ ${err.message}
       throw new Error(data.detail || "The AI service could not answer right now.");
     }
     return data.answer;
+  };
+
+  const shareLocation = () => {
+    if (!navigator.geolocation) {
+      setMessages((previous) => [
+        ...previous,
+        { id: Date.now(), sender: "ai", text: "Location sharing is not supported by this browser." },
+      ]);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        setSharedLocation({ latitude: coords.latitude, longitude: coords.longitude });
+        setMessages((previous) => [
+          ...previous,
+          { id: Date.now(), sender: "ai", text: "📍 Location shared for this chat. I can now check local weather and nearby solar businesses." },
+        ]);
+      },
+      () => setMessages((previous) => [
+        ...previous,
+        { id: Date.now(), sender: "ai", text: "I could not access your location. Marketplace questions still work without it." },
+      ]),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
   };
 
   // =========================================================
@@ -1966,6 +2035,75 @@ ${err.message}
           color: #ff9aaa;
         }
 
+        /* Energix briefing: display-only styling; live data and chat APIs stay unchanged. */
+        .briefing-overlay {
+          background: rgba(45, 40, 30, 0.42);
+          backdrop-filter: blur(7px);
+        }
+
+        .briefing-popup {
+          width: min(1040px, calc(100vw - 48px));
+          max-height: min(88vh, 900px);
+          color: #25231e;
+          background: #f7f0df;
+          border: 2px solid #25231e;
+          border-radius: 26px;
+          box-shadow: 10px 11px 0 rgba(37, 35, 30, 0.28), 0 28px 75px rgba(37, 35, 30, 0.28);
+        }
+
+        .briefing-header, .briefing-footer {
+          border-color: #d5c9af;
+          background: #efe5ce;
+        }
+
+        .briefing-header { padding: 19px 25px; }
+        .briefing-icon { color: #25231e; background: #f7c843; border: 1px solid #25231e; box-shadow: 2px 2px 0 #25231e; }
+        .briefing-title-text { font-size: 18px; color: #25231e; }
+        .briefing-subtitle { color: #625d53; font-size: 12px; }
+        .close-button { color: #25231e; background: #f7f0df; border: 1px solid #9e927d; }
+        .close-button:hover { color: #25231e; background: #f7c843; }
+        .briefing-content { padding: 28px; }
+        .briefing-greeting { max-width: 760px; color: #25231e; font-size: clamp(23px, 2.4vw, 31px); line-height: 1.28; margin-bottom: 23px; }
+        .briefing-greeting span { display: block; font-size: .72em; font-weight: 500; margin-top: 5px; }
+        .briefing-cards { margin: 0 0 22px; gap: 13px; }
+        .briefing-card, .request-list {
+          background: #fffcf4;
+          border: 1.5px solid #c7baa0;
+          border-radius: 16px;
+          box-shadow: 2px 3px 0 rgba(37, 35, 30, 0.10);
+        }
+        .briefing-card { padding: 17px; }
+        .briefing-card-label { color: #6a604f; font-size: 11px; font-weight: 800; letter-spacing: .1em; }
+        .briefing-card-value { color: #25231e !important; font-size: 24px !important; line-height: 1.25; margin-top: 7px; }
+        .briefing-card-small { color: #625d53; font-size: 13px; line-height: 1.45; margin-top: 5px; }
+        .briefing-section { margin-top: 18px; }
+        .briefing-section-title { color: #25231e; font-size: 16px; font-weight: 800; letter-spacing: .03em; margin: 0 0 10px; }
+        .briefing-highlight { border-color: #b3922c; background: #fff5d5; }
+        .briefing-action { color: #6c4e00 !important; font-size: 28px !important; }
+        .briefing-detail-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 13px; }
+        .briefing-detail-grid .briefing-card { min-height: 150px; }
+        .recommended-request { border-color: #c89c2d; background: #fff7df; }
+        .recommended-request .briefing-card-value { font-size: 21px !important; }
+        .request-facts { display: grid; gap: 4px; margin-top: 9px; color: #514a3d; font-size: 13px; line-height: 1.4; }
+        .weather-condition { display: flex; align-items: center; gap: 8px; color: #25231e; font-size: 18px; font-weight: 800; margin-top: 7px; }
+        .weather-condition span { font-size: 24px; }
+        .request-list { margin-top: 10px; }
+        .request-heading { color: #25231e; background: #efe5ce; border-color: #d5c9af; font-size: 15px; padding: 14px 17px; }
+        .request-item { align-items: flex-start; gap: 14px; border-color: #e5dcc9; padding: 14px 17px; }
+        .request-name { color: #25231e; font-size: 15px; font-weight: 800; }
+        .request-purpose { color: #625d53; font-size: 13px; line-height: 1.4; margin-top: 4px; }
+        .request-energy { color: #6c4e00; font-size: 15px; white-space: nowrap; }
+        .briefing-footer { padding: 15px 25px; }
+        .voice-button { color: #25231e; background: #f7c843; border: 1px solid #25231e; border-radius: 10px; font-size: 13px; }
+        .voice-button.stop { color: #7c221d; background: #fbe1dc; border-color: #b95c50; }
+        .assistant-reopen-button {
+          position: fixed; right: 24px; bottom: 24px; z-index: 9998;
+          display: inline-flex; align-items: center; gap: 9px; padding: 13px 18px;
+          color: #25231e; background: #f7c843; border: 2px solid #25231e; border-radius: 999px;
+          box-shadow: 4px 4px 0 #25231e; cursor: pointer; font-size: 15px; font-weight: 800;
+        }
+        .assistant-reopen-button:hover { background: #ffda60; transform: translate(-1px, -1px); box-shadow: 5px 5px 0 #25231e; }
+
         @media(max-width:650px) {
 
           .ai-section {
@@ -1977,9 +2115,17 @@ ${err.message}
               1fr;
           }
 
+          .briefing-detail-grid { grid-template-columns: 1fr; }
+
+          .briefing-popup { width: calc(100vw - 24px); max-height: calc(100vh - 24px); }
+
+          .briefing-header, .briefing-footer { padding-left: 17px; padding-right: 17px; }
+
           .briefing-content {
             padding: 18px;
           }
+
+          .assistant-reopen-button { right: 16px; bottom: 16px; font-size: 14px; }
 
           .message-content {
             max-width: 88%;
@@ -2145,6 +2291,20 @@ ${err.message}
 
           <div className="ai-input-box">
 
+            <button
+              className="send-button"
+              type="button"
+              onClick={shareLocation}
+              disabled={isChatLoading}
+              title={sharedLocation ? "Location shared for this chat" : "Share location for local weather and nearby businesses"}
+              style={{
+                background: sharedLocation ? "#1d8054" : undefined,
+                fontSize: "14px",
+              }}
+            >
+              📍
+            </button>
+
             <textarea
               className="ai-input"
               value={input}
@@ -2238,271 +2398,115 @@ ${err.message}
 
                 {loading
                   ? "Checking your energy system..."
-                  : `Hello, ${username} 👋`}
+                  : <>
+                      Hello, {displayName} 👋 I’m your personal energy assistant.
+                      <span>Here’s a quick summary of your latest energy updates.</span>
+                    </>}
 
               </div>
 
               {!loading &&
                 !error && (
                   <>
-
-                    <div className="briefing-text">
-
-                      <p>
-                        Here is your latest
-                        energy update based
-                        on the information
-                        currently available
-                        from your system.
-                      </p>
-
-                    </div>
-
                     <div className="briefing-cards">
-
                       <div className="briefing-card">
-
                         <div className="briefing-card-label">
                           Battery
                         </div>
-
-                        <div
-                          className="briefing-card-value"
-                          style={{
-                            color:
-                              "#55d9e5"
-                          }}
-                        >
-                          {batterySoc.toFixed(
-                            1
-                          )}
-                          %
-                        </div>
-
+                        <div className="briefing-card-value">{batterySoc.toFixed(1)}%</div>
                         <div className="briefing-card-small">
-                          {availableEnergy.toFixed(
-                            2
-                          )}{" "}
-                          kWh available
+                          {availableEnergy.toFixed(2)} kWh available
                         </div>
-
                       </div>
-
                       <div className="briefing-card">
-
                         <div className="briefing-card-label">
                           PV Power
                         </div>
-
-                        <div
-                          className="briefing-card-value"
-                          style={{
-                            color:
-                              "#ff9a72"
-                          }}
-                        >
-                          {pvPower.toFixed(
-                            2
-                          )}
-                        </div>
-
+                        <div className="briefing-card-value">{pvPower.toFixed(2)} W</div>
                         <div className="briefing-card-small">
-                          watts
+                          Current output
                         </div>
-
                       </div>
-
                       <div className="briefing-card">
-
                         <div className="briefing-card-label">
                           Market Price
                         </div>
-
-                        <div
-                          className="briefing-card-value"
-                          style={{
-                            color:
-                              "#b98cf2"
-                          }}
-                        >
+                        <div className="briefing-card-value">
                           {Number.isFinite(
                             marketPrice
                           )
                             ? `₹${marketPrice.toFixed(
                                 2
-                              )}`
+                              )}/kWh`
                             : "—"}
                         </div>
-
                         <div className="briefing-card-small">
-                          average per kWh
+                          Current market
                         </div>
-
                       </div>
-
                       <div className="briefing-card">
-
                         <div className="briefing-card-label">
                           Pending Requests
                         </div>
-
-                        <div
-                          className="briefing-card-value"
-                          style={{
-                            color:
-                              "#5fd98a"
-                          }}
-                        >
-                          {
-                            pendingRequests.length
-                          }
-                        </div>
-
+                        <div className="briefing-card-value">{pendingRequests.length}</div>
                         <div className="briefing-card-small">
-                          {
-                            totalRequestedEnergy.toFixed(
-                              2
-                            )
-                          }{" "}
-                          kWh requested
+                          {totalRequestedEnergy.toFixed(2)} kWh requested
                         </div>
-
                       </div>
-
                     </div>
 
-                    {insights && (
-                      <div
-                        style={{
-                          marginTop: 16,
-                          display: "grid",
-                          gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                          gap: 10,
-                        }}
-                      >
-                        <div className="briefing-card" style={{ gridColumn: "1 / -1", borderColor: "rgba(95,217,138,0.35)" }}>
-                          <div className="briefing-card-label">AI: What should I do now?</div>
-                          <div className="briefing-card-value" style={{ color: "#5fd98a", fontSize: 20 }}>
-                            {nowRecommendation?.action || "HOLD"}
-                          </div>
-                          <div className="briefing-card-small">Why? {nowRecommendation?.explanation || "Waiting for enough live insight data."}</div>
-                        </div>
 
-                        <div className="briefing-card">
-                          <div className="briefing-card-label">Recommended request</div>
-                          <div className="briefing-card-value" style={{ color: "#ffcf6e", fontSize: 16 }}>
-                            {recommendedRequest ? `${recommendedRequest.consumer} · ${recommendedRequest.score}/100` : "None"}
-                          </div>
-                          <div className="briefing-card-small">
-                            Why? {recommendedRequest?.explanation || "No pending requests to prioritize."}
-                          </div>
-                        </div>
-
-                        <div className="briefing-card">
-                          <div className="briefing-card-label">Suggested selling price</div>
-                          <div className="briefing-card-value" style={{ color: "#b98cf2", fontSize: 16 }}>
-                            ₹{Number(insights.selling_price?.suggested_price || 0).toFixed(2)}
-                          </div>
-                          <div className="briefing-card-small">
-                            Market: ₹{Number(insights.selling_price?.current_market_price || 0).toFixed(2)}/kWh · recommendation only
-                          </div>
-                        </div>
-
-                        <div className="briefing-card">
-                          <div className="briefing-card-label">Weather → solar → trading</div>
-                          <div className="briefing-card-value" style={{ color: "#55d9e5", fontSize: 16 }}>
-                            {insights.weather_trading?.action || "HOLD"}
-                          </div>
-                          <div className="briefing-card-small">
-                            Why? {insights.weather_trading?.explanation}
-                          </div>
-                        </div>
-
-                        <div className="briefing-card">
-                          <div className="briefing-card-label">Battery decision</div>
-                          <div className="briefing-card-value" style={{ color: "#ff9a72", fontSize: 16 }}>
-                            {insights.battery_decision?.action || "HOLD"}
-                          </div>
-                          <div className="briefing-card-small">
-                            Why? {insights.battery_decision?.explanation}
-                          </div>
-                        </div>
-
-                        <div className="briefing-card" style={{ gridColumn: "1 / -1" }}>
-                          <div className="briefing-card-label">Market price prediction</div>
-                          <div className="briefing-card-value" style={{ color: "#b98cf2", fontSize: 16 }}>
-                            ₹{Number(insights.market_prediction?.current_price || 0).toFixed(2)} → ₹{Number(insights.market_prediction?.predicted_price || 0).toFixed(2)} · {insights.market_prediction?.direction || "stable"}
-                          </div>
-                          <div className="briefing-card-small">
-                            {insights.market_prediction?.limited ? "Limited estimate. " : ""}Why? {insights.market_prediction?.explanation}
-                          </div>
-                        </div>
+                    <section className="briefing-section">
+                      <h3 className="briefing-section-title">AI: What should I do now?</h3>
+                      <div className="briefing-card briefing-highlight">
+                        <div className="briefing-card-value briefing-action">{nowRecommendation?.action || "HOLD"}</div>
+                        <div className="briefing-card-small">Why? {conciseRecommendationReason}</div>
                       </div>
-                    )}
+                    </section>
 
-                    <div className="briefing-text">
+                    <div className="briefing-detail-grid briefing-section">
+                      <section className="briefing-card">
+                        <h3 className="briefing-section-title">Suggested Selling Price</h3>
+                        <div className="briefing-card-value">₹{Number(insights?.selling_price?.suggested_price || 0).toFixed(2)}/kWh</div>
+                        <div className="briefing-card-small">{insights?.selling_price?.explanation || "Recommendation only; your listing price is never changed automatically."}</div>
+                      </section>
 
-                      <p>
-                        Your battery currently
-                        has{" "}
-                        <strong>
-                          {availableEnergy.toFixed(
-                            2
-                          )}{" "}
-                          kWh
-                        </strong>{" "}
-                        available out of{" "}
-                        <strong>
-                          {batteryCapacity.toFixed(
-                            2
-                          )}{" "}
-                          kWh
-                        </strong>.
-                      </p>
+                      <section className="briefing-card recommended-request">
+                        <h3 className="briefing-section-title">Recommended Request</h3>
+                        {recommendedRequest ? (
+                          <>
+                            <div className="briefing-card-value">{recommendedRequest.consumer}</div>
+                            <div className="request-facts">
+                              <span><strong>Reason:</strong> {recommendedRequest.reason || "No reason provided"}</span>
+                              <span><strong>Energy:</strong> {Number(recommendedRequest.energy || 0).toFixed(2)} kWh</span>
+                              <span><strong>Offer:</strong> ₹{Number(recommendedRequest.offered_price || 0).toFixed(2)}/kWh · {recommendedRequest.priority_level} priority</span>
+                            </div>
+                          </>
+                        ) : <div className="briefing-card-small">No pending request is available to prioritize.</div>}
+                      </section>
+                    </div>
 
-                      <p>
-                        The battery is currently{" "}
-                        <strong>
-                          {String(
-                            batteryState
-                          ).toLowerCase()}
-                        </strong>{" "}
-                        and its health is{" "}
-                        <strong>
-                          {String(
-                            batteryHealth
-                          ).toLowerCase()}
-                        </strong>.
-                      </p>
+                    <div className="briefing-detail-grid briefing-section">
+                      <section className="briefing-card">
+                        <h3 className="briefing-section-title">Weather &amp; Solar</h3>
+                        <div className="weather-condition"><span>{weatherIcon}</span>{weatherCondition}</div>
+                        <div className="briefing-card-small">{insights?.weather_trading?.explanation || "Weather insight is unavailable until a current forecast is received."}</div>
+                      </section>
 
-                      <p>
-                        You have{" "}
-                        <strong>
-                          {
-                            pendingRequests.length
-                          }
-                        </strong>{" "}
-                        pending buying request
-                        {pendingRequests.length ===
-                        1
-                          ? ""
-                          : "s"}.
-                      </p>
-
+                      <section className="briefing-card">
+                        <h3 className="briefing-section-title">Market Price Prediction</h3>
+                        <div className="briefing-card-value">₹{Number(insights?.market_prediction?.current_price || 0).toFixed(2)} → ₹{Number(insights?.market_prediction?.predicted_price || 0).toFixed(2)}</div>
+                        <div className="briefing-card-small">{String(insights?.market_prediction?.direction || "stable").replace(/^./, (letter) => letter.toUpperCase())} · {insights?.market_prediction?.limited ? "Limited estimate. " : ""}{insights?.market_prediction?.explanation || "Prediction will appear when enough live data is available."}</div>
+                      </section>
                     </div>
 
                     <div className="request-list">
-
                       <div className="request-heading">
-                        👥 Pending Buying Requests
+                        Pending Buying Requests
                       </div>
-
                       {pendingRequests.length ===
                       0 ? (
-
-                        <div
-                          className="request-item"
-                        >
+                        <div className="request-item">
                           <div>
                             <div className="request-name">
                               No pending requests
@@ -2517,23 +2521,11 @@ ${err.message}
                         </div>
 
                       ) : (
-
                         pendingRequests.map(
                           (request) => (
-
-                            <div
-                              className="request-item"
-                              key={request.id}
-                            >
-
+                            <div className="request-item" key={request.id}>
                               <div>
-
-                                <div className="request-name">
-                                  {
-                                    request.consumer
-                                  }
-                                </div>
-
+                                <div className="request-name">{request.consumer}</div>
                                 <div className="request-purpose">
                                   {request.urgency || "Normal"} priority · {request.reason || "No reason provided"}
                                   {insights?.request_priority?.requests
@@ -2542,61 +2534,14 @@ ${err.message}
                                     <> · Reliability {Number(insights.request_priority.requests.find((item) => item.request_id === request.id).reliability.score).toFixed(0)}/100</>
                                   )}
                                 </div>
-
                               </div>
-
                               <div className="request-energy">
-                                {Number(
-                                  request.energy ||
-                                    0
-                                ).toFixed(
-                                  2
-                                )}{" "}
-                                kWh
+                                {Number(request.energy || 0).toFixed(2)} kWh
                               </div>
-
                             </div>
-
                           )
                         )
-
                       )}
-
-                    </div>
-
-                    <div
-                      className="briefing-text"
-                      style={{
-                        marginTop: 18
-                      }}
-                    >
-
-                      <p>
-                        The current market
-                        average is{" "}
-                        <strong>
-                          {Number.isFinite(
-                            marketPrice
-                          )
-                            ? `₹${marketPrice.toFixed(
-                                2
-                              )}/kWh`
-                            : "not available"}
-                        </strong>.
-                      </p>
-
-                      <p>
-                        If all pending requests
-                        were supplied, the calculated
-                        remaining energy would be{" "}
-                        <strong>
-                          {remainingAfterRequests.toFixed(
-                            2
-                          )}{" "}
-                          kWh
-                        </strong>.
-                      </p>
-
                     </div>
 
                   </>
@@ -2685,6 +2630,17 @@ ${err.message}
 
         </div>
 
+      )}
+
+      {!showBriefing && (
+        <button
+          type="button"
+          className="assistant-reopen-button"
+          onClick={handleOpenBriefing}
+          aria-label="Open Energy Assistant"
+        >
+          ✦ Energy Assistant
+        </button>
       )}
 
     </>

@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config";
+import {
+  buildPeriodAnalytics,
+  TimeRangeSelect,
+} from "../overview/TransactionAnalytics";
 
 const API = API_BASE_URL;
 
@@ -189,15 +193,16 @@ export default function ProducerOverview() {
   // -----------------------------------------------------------
   // Revenue chart
   // -----------------------------------------------------------
-  const revenueData = [
-    { day: "Mon", revenue: 2200 },
-    { day: "Tue", revenue: 3100 },
-    { day: "Wed", revenue: 1800 },
-    { day: "Thu", revenue: 4500 },
-    { day: "Fri", revenue: 3900 },
-    { day: "Sat", revenue: 5200 },
-    { day: "Sun", revenue: stats.earnings },
-  ];
+  const [revenueTransactions, setRevenueTransactions] = useState([]);
+  const [revenueRange, setRevenueRange] = useState("Month");
+  const [revenueLoading, setRevenueLoading] = useState(true);
+  const [revenueError, setRevenueError] = useState("");
+
+  const revenueAnalytics = buildPeriodAnalytics(
+    revenueTransactions,
+    revenueRange
+  );
+  const revenueData = revenueAnalytics.chartData;
 
   // -----------------------------------------------------------
   // Load dashboard when page opens
@@ -205,7 +210,34 @@ export default function ProducerOverview() {
   useEffect(() => {
     loadDashboard();
     loadBattery();
+    loadRevenueAnalytics();
   }, []);
+
+  const loadRevenueAnalytics = async () => {
+    const username = localStorage.getItem("username");
+
+    if (!username) {
+      setRevenueError("Producer username not found.");
+      setRevenueLoading(false);
+      return;
+    }
+
+    try {
+      setRevenueLoading(true);
+      setRevenueError("");
+      const response = await axios.get(
+        `${API}/trading/transactions/producer/${encodeURIComponent(username)}`
+      );
+      setRevenueTransactions(
+        Array.isArray(response.data) ? response.data : []
+      );
+    } catch (err) {
+      console.error("Failed to load producer revenue analytics:", err);
+      setRevenueError("Unable to load revenue analytics.");
+    } finally {
+      setRevenueLoading(false);
+    }
+  };
 
   // -----------------------------------------------------------
   // Load trading dashboard data
@@ -494,22 +526,76 @@ export default function ProducerOverview() {
 
         <Panel style={{ minHeight: 420 }}>
 
-          <h2
+          <div
             style={{
-              fontFamily: "Space Grotesk, sans-serif",
-              fontSize: 17,
-              fontWeight: 600,
-              color: colors.text,
-              margin: "0 0 18px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              marginBottom: 18,
             }}
           >
-            Revenue Analytics
-          </h2>
+            <div>
+              <h2
+                style={{
+                  fontFamily: "Space Grotesk, sans-serif",
+                  fontSize: 17,
+                  fontWeight: 600,
+                  color: colors.text,
+                  margin: 0,
+                }}
+              >
+                Revenue Analytics
+              </h2>
+              <p style={{ color: colors.textMuted, fontSize: 12, margin: "5px 0 0" }}>
+                Completed sales in the current {revenueRange.toLowerCase()}.
+              </p>
+            </div>
+            <TimeRangeSelect
+              value={revenueRange}
+              onChange={setRevenueRange}
+              accent={colors.green}
+              text={colors.text}
+              muted={colors.textMuted}
+              border={colors.border}
+              surface={colors.surfaceAlt}
+            />
+          </div>
 
-          <ResponsiveContainer
-            width="100%"
-            height={320}
-          >
+          <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginBottom: 18 }}>
+            <div>
+              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Revenue
+              </div>
+              <strong style={{ color: colors.green, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
+                ₹{revenueAnalytics.summary.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              </strong>
+            </div>
+            <div>
+              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                Energy Sold
+              </div>
+              <strong style={{ color: colors.cyan, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
+                {revenueAnalytics.summary.energy.toFixed(2)} kWh
+              </strong>
+            </div>
+          </div>
+
+          {revenueLoading ? (
+            <div style={{ height: 320, display: "grid", placeItems: "center", color: colors.textMuted, fontSize: 13 }}>
+              Loading revenue analytics...
+            </div>
+          ) : revenueError ? (
+            <div style={{ height: 320, display: "grid", placeItems: "center", color: colors.red, fontSize: 13, textAlign: "center" }}>
+              {revenueError}
+            </div>
+          ) : revenueData.length === 0 ? (
+            <div style={{ height: 320, display: "grid", placeItems: "center", color: colors.textMuted, fontSize: 13, textAlign: "center" }}>
+              No data available for this period.
+            </div>
+          ) : (
+          <ResponsiveContainer width="100%" height={320}>
             <LineChart data={revenueData}>
 
               <CartesianGrid
@@ -518,7 +604,7 @@ export default function ProducerOverview() {
               />
 
               <XAxis
-                dataKey="day"
+                dataKey="label"
                 stroke={colors.textMuted}
                 tick={{
                   fill: colors.textMuted,
@@ -548,11 +634,18 @@ export default function ProducerOverview() {
                 labelStyle={{
                   color: colors.textMuted,
                 }}
+                formatter={(value, name, item) => {
+                  if (name === "Revenue") {
+                    return [`₹${Number(value).toFixed(2)}`, name];
+                  }
+                  return [value, name];
+                }}
               />
 
               <Line
                 type="monotone"
-                dataKey="revenue"
+                dataKey="amount"
+                name="Revenue"
                 stroke={colors.green}
                 strokeWidth={3}
                 dot={{
@@ -567,6 +660,7 @@ export default function ProducerOverview() {
 
             </LineChart>
           </ResponsiveContainer>
+          )}
 
         </Panel>
 
