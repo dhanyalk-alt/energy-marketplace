@@ -243,6 +243,11 @@ export default function Trading() {
   const [availableEnergy, setAvailableEnergy] = useState("");
   const [price, setPrice] = useState("");
   const [listingLoading, setListingLoading] = useState(false);
+  const [consumerEnergy, setConsumerEnergy] = useState(0);
+  const [publicEnergy, setPublicEnergy] = useState(0);
+  const [activeListing, setActiveListing] = useState(null);
+  const [initialListingPrice, setInitialListingPrice] = useState(null);
+  const [successToast, setSuccessToast] = useState("");
 
   // =======================================================
   // NORMAL BUY REQUESTS
@@ -279,6 +284,45 @@ export default function Trading() {
   // =======================================================
 
   const username = localStorage.getItem("username");
+  const loadProsumerInventory = async () => {
+    if (localStorage.getItem("user_role")?.toLowerCase() !== "producer" || !username) return;
+    try {
+      const [inventoryResponse, balancesResponse, listingsResponse] = await Promise.all([
+        axios.get(`${API}/trading/inventory/${encodeURIComponent(username)}`),
+        axios.get(`${API}/trading/balances`),
+        axios.get(`${API}/trading/all`),
+      ]);
+      const producerKey = username.trim().toLowerCase();
+      const privateEnergy = Number(inventoryResponse.data?.available_energy_kwh || 0);
+      const listedEnergy = Number(balancesResponse.data?.[producerKey] || 0);
+      const activeListings = (Array.isArray(listingsResponse.data) ? listingsResponse.data : [])
+        .filter((listing) => listing.producer?.trim().toLowerCase() === producerKey && listing.status === "Available")
+        .sort((first, second) => Number(second.id) - Number(first.id));
+      const currentListing = activeListings[0] || null;
+      setConsumerEnergy(privateEnergy);
+      setPublicEnergy(listedEnergy);
+      setActiveListing(currentListing);
+      setInitialListingPrice(currentListing ? Number(currentListing.price || 0) : null);
+    } catch (error) {
+      console.error("Unable to load producer inventory:", error);
+    }
+  };
+
+  const publishConsumerEnergy = async () => {
+    if (!consumerEnergy || !username) return;
+    try {
+      setListingLoading(true);
+      await axios.post(`${API}/trading/inventory/${encodeURIComponent(username)}/publish`);
+      await loadProsumerInventory();
+      setSuccessToast("Consumer Energy added to Available Energy and your listing.");
+      window.setTimeout(() => setSuccessToast(""), 4000);
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
+    } catch (error) {
+      alert(error.response?.data?.detail || "Unable to publish Consumer Energy.");
+    } finally {
+      setListingLoading(false);
+    }
+  };
 
   // =======================================================
   // LOAD NORMAL BUY REQUESTS
@@ -433,13 +477,19 @@ export default function Trading() {
 
   useEffect(() => {
     loadTradingData(false);
+    loadProsumerInventory();
 
     // 10s silent background refresh keeps market requests in sync without UI flicker
     const pollTimer = window.setInterval(() => loadTradingData(true), 10000);
-    const onTradeUpdate = () => loadTradingData(true);
+    const inventoryTimer = window.setInterval(loadProsumerInventory, 10000);
+    const onTradeUpdate = () => {
+      loadTradingData(true);
+      loadProsumerInventory();
+    };
     window.addEventListener("energy-trade-updated", onTradeUpdate);
     return () => {
       window.clearInterval(pollTimer);
+      window.clearInterval(inventoryTimer);
       window.removeEventListener("energy-trade-updated", onTradeUpdate);
     };
   }, []);
@@ -467,6 +517,17 @@ export default function Trading() {
       return;
     }
 
+    if (consumerEnergy > 0 && energyValue > publicEnergy) {
+      const confirmed = window.confirm("You are adding your consumer energy to your listing. Do you want to continue?");
+      if (!confirmed) return;
+      try {
+        await axios.post(`${API}/trading/inventory/${encodeURIComponent(username)}/publish`);
+      } catch (error) {
+        alert(error.response?.data?.detail || "Unable to publish Consumer Energy.");
+        return;
+      }
+    }
+
     try {
       setListingLoading(true);
 
@@ -484,11 +545,11 @@ export default function Trading() {
         response.data
       );
 
-      alert("Energy listing added successfully.");
-
+      alert(activeListing ? "Listing updated successfully." : "Energy listing added successfully.");
       setAvailableEnergy("");
       setPrice("");
-
+      setInitialListingPrice(Number(response.data?.price ?? priceValue));
+      await loadProsumerInventory();
       await loadTradingData();
       window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (err) {
@@ -776,7 +837,7 @@ export default function Trading() {
             marginBottom: 6,
           }}
         >
-          Producer Â· Trading
+          Producer · Trading
         </div>
 
         <h1
@@ -825,7 +886,7 @@ export default function Trading() {
               margin: "0 0 18px",
             }}
           >
-            âš¡ Sell Energy
+            {activeListing ? "Manage Active Listing" : "⚡ Sell Energy"}
           </h2>
 
           <div
@@ -835,6 +896,29 @@ export default function Trading() {
               gap: 14,
             }}
           >
+            <button
+              type="button"
+              onClick={() => {
+                if (consumerEnergy > 0 && window.confirm("Do you want to sell?")) {
+                  publishConsumerEnergy();
+                }
+              }}
+              disabled={listingLoading || consumerEnergy <= 0}
+              style={{ border: "1px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", textAlign: "left", cursor: consumerEnergy > 0 ? "pointer" : "default", background: "#f8fafc", color: colors.text }}
+            >
+              <strong>Consumer Energy</strong>
+              <span style={{ display: "block", marginTop: 5, color: colors.textMuted }}>
+                {consumerEnergy.toFixed(2)} kWh · Click to choose whether to sell
+              </span>
+            </button>
+            <div style={{ color: colors.green, fontSize: 13, fontWeight: 700 }}>
+              Public Available Energy: {publicEnergy.toFixed(2)} kWh
+            </div>
+            {successToast && (
+              <div role="status" style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, padding: "12px 18px", borderRadius: 8, background: "#dcfce7", color: "#166534", boxShadow: "0 8px 24px rgba(0,0,0,.16)" }}>
+                {successToast}
+              </div>
+            )}
             {/* ENERGY */}
 
             <div>
@@ -848,7 +932,7 @@ export default function Trading() {
                   letterSpacing: "0.05em",
                 }}
               >
-                Available Energy (kWh)
+                REMAINING ENERGY TO SELL (KWH)
               </label>
 
               <input
@@ -856,13 +940,13 @@ export default function Trading() {
                 type="number"
                 min="0.01"
                 step="0.01"
-                placeholder="e.g. 50"
+                placeholder="Enter remaining energy (kWh)"
                 value={availableEnergy}
                 disabled={listingLoading}
                 onChange={(e) =>
-                  setAvailableEnergy(
-                    e.target.value
-                  )
+                  {
+                    setAvailableEnergy(e.target.value);
+                  }
                 }
               />
             </div>
@@ -880,7 +964,33 @@ export default function Trading() {
                   letterSpacing: "0.05em",
                 }}
               >
-                Price per kWh (â‚¹)
+                SELLING PRICE PER KWH (₹)
+              </label>
+
+              <input
+                className="tr-input"
+                type="number"
+                value={activeListing ? Number(initialListingPrice ?? activeListing.price).toFixed(2) : ""}
+                readOnly
+                aria-label="Initial selling price per kWh"
+                style={{ background: "#f1f5f9", color: colors.textMuted }}
+              />
+            </div>
+
+            {/* UPDATED PRICE */}
+
+            <div>
+              <label
+                style={{
+                  display: "block",
+                  fontSize: 12,
+                  color: colors.textMuted,
+                  marginBottom: 6,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.05em",
+                }}
+              >
+                UPDATED PRICE PER KWH (₹)
               </label>
 
               <input
@@ -888,11 +998,13 @@ export default function Trading() {
                 type="number"
                 min="0"
                 step="0.01"
-                placeholder="e.g. 8.35"
+                placeholder="Enter updated price (₹/kWh)"
                 value={price}
                 disabled={listingLoading}
                 onChange={(e) =>
-                  setPrice(e.target.value)
+                  {
+                    setPrice(e.target.value);
+                  }
                 }
               />
             </div>
@@ -903,9 +1015,7 @@ export default function Trading() {
               disabled={listingLoading}
               style={{ marginTop: 6 }}
             >
-              {listingLoading
-                ? "Adding..."
-                : "Add Listing"}
+              {listingLoading ? "Submitting..." : activeListing ? "Submit Listing Update" : "Add Listing"}
             </button>
           </div>
         </Panel>
@@ -1313,7 +1423,7 @@ export default function Trading() {
                           </td>
 
                           <td>
-                            â‚¹
+                            ₹
                             {Number(
                               negotiation.producer_price ||
                                 0
@@ -1327,7 +1437,7 @@ export default function Trading() {
                               fontWeight: 700,
                             }}
                           >
-                            â‚¹
+                            ₹
                             {Number(
                               negotiation.consumer_offer ||
                                 0
@@ -1345,10 +1455,10 @@ export default function Trading() {
                               null &&
                             negotiation.negotiated_price !==
                               undefined
-                              ? `â‚¹${Number(
+                              ? `₹${Number(
                                   negotiation.negotiated_price
                                 ).toFixed(2)}`
-                              : "â€”"}
+                              : "—"}
                           </td>
 
                           <td
@@ -1415,7 +1525,7 @@ export default function Trading() {
                                   fontWeight: 700,
                                 }}
                               >
-                                âœ“ Transaction Created
+                                ✓ Transaction Created
                               </span>
                             )}
 

@@ -184,12 +184,20 @@ export default function ProducerOverview() {
     loadDashboard();
     loadBattery();
     loadRevenueAnalytics();
+    const refreshEnergy = () => {
+      loadDashboard(true);
+      loadBattery(true);
+    };
+    window.addEventListener("energy-trade-updated", refreshEnergy);
     const timer = window.setInterval(() => {
       loadDashboard(true);
       loadBattery(true);
       loadRevenueAnalytics(true);
     }, 10000);
-    return () => window.clearInterval(timer);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("energy-trade-updated", refreshEnergy);
+    };
   }, []);
 
   const loadRevenueAnalytics = async (silent = false) => {
@@ -217,19 +225,15 @@ export default function ProducerOverview() {
   const loadDashboard = async (silent = false) => {
     try {
       const username = localStorage.getItem("username");
-      const [tradingResponse, requestResponse] = await Promise.all([
-        axios.get(`${API}/trading/all`),
+      const isProducerAccount = localStorage.getItem("user_role")?.toLowerCase() === "producer";
+      const [requestResponse, balancesResponse] = await Promise.all([
         axios.get(`${API}/trading/requests`),
+        isProducerAccount ? axios.get(`${API}/trading/balances`) : Promise.resolve({ data: {} }),
       ]);
-      const tradingData = Array.isArray(tradingResponse.data) ? tradingResponse.data : [];
       const requestData = Array.isArray(requestResponse.data) ? requestResponse.data : [];
-
-      const myListings = tradingData.filter((item) => item.producer === username);
-      const myRequests = requestData.filter((item) => item.producer === username);
-
-      const availableEnergy = myListings
-        .filter((item) => item.status === "Available")
-        .reduce((sum, item) => sum + Number(item.energy || 0), 0);
+      const userKey = username?.trim().toLowerCase();
+      const myRequests = requestData.filter((item) => item.producer?.trim().toLowerCase() === userKey);
+      const availableEnergy = Number(balancesResponse.data?.[userKey] || 0);
 
       const accepted = myRequests.filter((item) => item.status === "Accepted");
       const pending  = myRequests.filter((item) => item.status === "Pending");

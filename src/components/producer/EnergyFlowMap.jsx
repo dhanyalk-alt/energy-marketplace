@@ -21,10 +21,6 @@ const colors = {
 const flowStyles = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
-@keyframes warmFlow {
-  from { stroke-dashoffset: 48; }
-  to   { stroke-dashoffset: 0; }
-}
 `;
 
 function formatEnergy(value) {
@@ -239,7 +235,7 @@ export default function EnergyFlowMap() {
       >
         {/* Legend */}
         <div style={{ display: "flex", gap: 18, marginBottom: 16, flexWrap: "wrap" }}>
-          <LegendItem color={colors.gold} label="Active Stream (Latest)" solid />
+          <LegendItem color="#06b6d4" label="Active Stream (Latest)" dashed />
           <LegendItem color={colors.borderStrong} label="Historical Flows" dashed />
         </div>
 
@@ -261,14 +257,13 @@ export default function EnergyFlowMap() {
             style={{ minWidth: 650, height: "auto", display: "block", overflow: "visible" }}
           >
             <defs>
-              {/* Warm gold gradient for active flow */}
-              <linearGradient id="warm-flow-gradient" x1="0" x2="1">
-                <stop offset="0%" stopColor="#859b32" />
-                <stop offset="100%" stopColor="#a3923d" />
+              {/* Cyan gradient and glow for active transmission */}
+              <linearGradient id="producer-flow-gradient" x1="0" x2="1">
+                <stop offset="0%" stopColor="#10b981" />
+                <stop offset="100%" stopColor="#0284c7" />
               </linearGradient>
-              {/* Glow filter for active flow */}
-              <filter id="warm-glow" x="-20%" y="-20%" width="140%" height="140%">
-                <feGaussianBlur stdDeviation="3" result="blur" />
+              <filter id="producer-flow-glow" x="-30%" y="-80%" width="160%" height="260%">
+                <feGaussianBlur stdDeviation="4" result="blur" />
                 <feMerge>
                   <feMergeNode in="blur" />
                   <feMergeNode in="SourceGraphic" />
@@ -286,6 +281,8 @@ export default function EnergyFlowMap() {
               const centerY = y + nodeHeight / 2;
               const isActive = flow.consumer.toLocaleLowerCase() === latestConsumer;
               const pathD = `M 360 ${producerY + nodeHeight / 2} C 480 ${producerY + nodeHeight / 2}, 540 ${centerY}, 670 ${centerY}`;
+              const midX = 505;
+              const midY = (producerY + nodeHeight / 2 + centerY) / 2;
 
               return (
                 <g key={`line-${flow.consumer}`}>
@@ -293,22 +290,43 @@ export default function EnergyFlowMap() {
                   <path
                     d={pathD}
                     fill="none"
-                    stroke={isActive ? "rgba(133,155,50,0.12)" : "rgba(216,200,176,0.08)"}
-                    strokeWidth={isActive ? 8 : 5}
+                    stroke={isActive ? "rgba(6,182,212,0.18)" : "rgba(148,163,184,0.08)"}
+                    strokeWidth={isActive ? 10 : 5}
                     strokeLinecap="round"
+                    filter={isActive ? "url(#producer-flow-glow)" : undefined}
                   />
-                  {/* Active: animated warm gold solid / Historical: dashed taupe */}
+                  {/* Active transmission animates; historical flows stay static */}
                   {isActive ? (
-                    <path
-                      d={pathD}
-                      fill="none"
-                      stroke="url(#warm-flow-gradient)"
-                      strokeWidth="3.5"
-                      strokeDasharray="8 12"
-                      strokeLinecap="round"
-                      filter="url(#warm-glow)"
-                      style={{ animation: "warmFlow 1.8s linear infinite" }}
-                    />
+                    <>
+                      <path
+                        d={pathD}
+                        fill="none"
+                        stroke="url(#producer-flow-gradient)"
+                        strokeWidth="4"
+                        strokeDasharray="9 13"
+                        strokeLinecap="round"
+                        filter="url(#producer-flow-glow)"
+                      >
+                        <animate
+                          attributeName="stroke-dashoffset"
+                          from="0"
+                          to="-22"
+                          dur="1.2s"
+                          repeatCount="indefinite"
+                        />
+                      </path>
+                      <circle r="4.5" fill="#10b981" filter="url(#producer-flow-glow)">
+                        <animateMotion
+                          dur="2s"
+                          repeatCount="indefinite"
+                          path={pathD}
+                        />
+                      </circle>
+                      <rect x={midX - 56} y={midY - 16} width="112" height="32" rx="16" fill="#ffffff" stroke="#bae6fd" strokeWidth="1.5" filter="drop-shadow(0 3px 8px rgba(2,132,199,0.16))" />
+                      <text x={midX} y={midY + 5} textAnchor="middle" fill="#0284c7" fontSize="14" fontWeight="800" fontFamily="Inter, sans-serif">
+                        {formatEnergy(flow.energy)} kWh →
+                      </text>
+                    </>
                   ) : (
                     <path
                       d={pathD}
@@ -325,7 +343,7 @@ export default function EnergyFlowMap() {
                     cx="670"
                     cy={centerY}
                     r="5"
-                    fill={isActive ? colors.gold : "#d8c8b0"}
+                    fill={isActive ? "#06b6d4" : "#d8c8b0"}
                     stroke="#ffffff"
                     strokeWidth="2"
                     opacity={isActive ? 1 : 0.5}
@@ -347,7 +365,7 @@ export default function EnergyFlowMap() {
                     width="270" height={nodeHeight}
                     rx="12"
                     fill={isActive ? "#fefcf9" : "#faf7f2"}
-                    stroke={isActive ? colors.gold : colors.border}
+                    stroke={isActive ? "#38bdf8" : colors.border}
                     strokeWidth={isActive ? 1.5 : 1}
                     filter={isActive ? "drop-shadow(0 4px 12px rgba(133,155,50,0.12))" : "none"}
                   />
@@ -359,12 +377,12 @@ export default function EnergyFlowMap() {
                     {shortenLabel(flow.consumer)}
                   </text>
                   {/* Energy value */}
-                  <text x="748" y={y + 50} fill={isActive ? colors.gold : colors.textMuted} fontSize="14" fontWeight="700">
+                  <text x="748" y={y + 50} fill={isActive ? "#0284c7" : colors.textMuted} fontSize="14" fontWeight="700">
                     {formatEnergy(flow.energy)} kWh
                   </text>
                   {/* Active badge */}
                   {isActive && (
-                    <text x="748" y={y + 65} fill={colors.gold} fontSize="10" fontWeight="700" letterSpacing="0.06em">
+                    <text x="748" y={y + 65} fill="#0284c7" fontSize="10" fontWeight="700" letterSpacing="0.06em">
                       ● ACTIVE STREAM
                     </text>
                   )}

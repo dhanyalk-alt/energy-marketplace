@@ -154,6 +154,8 @@ export default function Market() {
           username
         )}`
       );
+      const balanceResponse = await axios.get(`${API}/trading/balances`);
+      const balances = balanceResponse.data || {};
 
       const marketListings = Array.isArray(
         producerResponse.data?.listings
@@ -165,9 +167,13 @@ export default function Market() {
       // client-side normalization for older data and always render low-to-high.
       const latestByProducer = new Map();
       marketListings.forEach((listing) => {
-        const current = latestByProducer.get(listing.producer);
+        const producerKey = listing.producer?.trim().toLowerCase();
+        const current = latestByProducer.get(producerKey);
         if (!current || Number(listing.id) > Number(current.id)) {
-          latestByProducer.set(listing.producer, listing);
+          latestByProducer.set(producerKey, {
+            ...listing,
+            availableEnergy: Number(balances[producerKey] ?? listing.energy),
+          });
         }
       });
       setListings([...latestByProducer.values()].sort(
@@ -250,7 +256,12 @@ export default function Market() {
 
     // 10s silent background refresh maintains live market rates without page reload
     const pollTimer = window.setInterval(() => loadMarket(true), 10000);
-    return () => window.clearInterval(pollTimer);
+    const refresh = () => loadMarket(true);
+    window.addEventListener("energy-trade-updated", refresh);
+    return () => {
+      window.clearInterval(pollTimer);
+      window.removeEventListener("energy-trade-updated", refresh);
+    };
   }, [username]);
 
   // ==========================================================
@@ -1028,7 +1039,7 @@ export default function Market() {
 
                     <td>
                       {Number(
-                        item.energy
+                        item.availableEnergy ?? item.energy
                       ).toFixed(3)}{" "}
                       kWh
                     </td>

@@ -49,6 +49,10 @@ class User(Base):
         nullable=False,
     )
 
+    # Energy purchased while a producer account is in consumer mode. Kept
+    # separately from the live battery dataset so marketplace purchases persist.
+    producer_inventory_kwh = Column(Float, default=0.0, nullable=False)
+
     # Account status
     is_active = Column(
         Boolean,

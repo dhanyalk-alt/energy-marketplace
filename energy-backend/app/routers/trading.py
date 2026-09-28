@@ -123,6 +123,74 @@ async def get_all(
     return await get_all_trading(db)
 
 
+@router.get("/inventory/{username}")
+async def producer_inventory(
+    username: str,
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(select(User).where(User.username.ilike(username)))
+    users = [user for user in result.scalars().all() if str(user.role).lower() == "producer"]
+    return {"available_energy_kwh": round(sum(float(user.producer_inventory_kwh or 0) for user in users), 2)}
+
+
+@router.post("/inventory/{username}/publish")
+async def publish_producer_inventory(
+    username: str,
+    db: AsyncSession = Depends(get_db),
+):
+    users_result = await db.execute(select(User).where(User.username.ilike(username)))
+    users = [user for user in users_result.scalars().all() if str(user.role).lower() == "producer"]
+    energy = sum(float(user.producer_inventory_kwh or 0) for user in users)
+    if energy <= 0:
+        raise HTTPException(status_code=400, detail="There is no Consumer Energy to sell.")
+
+    names = [user.username for user in users]
+    listing_result = await db.execute(
+        select(Trading).where(
+            Trading.producer.in_(names), Trading.status == "Available", Trading.energy > 0
+        ).order_by(Trading.id.desc())
+    )
+    listings = listing_result.scalars().all()
+    if listings:
+        listing = listings[0]
+        listing.energy = round(float(listing.energy) + energy, 2)
+        for duplicate in listings[1:]:
+            listing.energy = round(float(listing.energy) + float(duplicate.energy), 2)
+            duplicate.energy = 0
+            duplicate.status = "Replaced"
+    else:
+        history_result = await db.execute(
+            select(Trading).where(Trading.producer.in_(names)).order_by(Trading.id.desc())
+        )
+        previous = history_result.scalars().first()
+        listing = Trading(producer=users[0].username, energy=round(energy, 2), price=float(previous.price) if previous else 0.0, status="Available")
+        db.add(listing)
+
+    for user in users:
+        user.producer_inventory_kwh = 0
+    await db.commit()
+    await db.refresh(listing)
+    return {"available_energy_kwh": round(float(listing.energy), 2), "listing_id": listing.id}
+
+
+@router.get("/balances")
+async def producer_balances(db: AsyncSession = Depends(get_db)):
+    """Current sellable balance per producer identity, ignoring username case."""
+    users_result = await db.execute(select(User))
+    listings_result = await db.execute(
+        select(Trading).where(Trading.energy > 0, Trading.status == "Available")
+    )
+    balances = {}
+    for user in users_result.scalars().all():
+        if str(user.role).lower() == "producer":
+            key = user.username.strip().casefold()
+            balances.setdefault(key, 0.0)
+    for listing in listings_result.scalars().all():
+        key = listing.producer.strip().casefold()
+        balances[key] = balances.get(key, 0.0) + float(listing.energy or 0)
+    return {key: round(value, 2) for key, value in balances.items()}
+
+
 # =========================================================
 # BUY ENERGY
 # =========================================================

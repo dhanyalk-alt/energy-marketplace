@@ -159,7 +159,12 @@ export default function ProducerMarketplace() {
 
     // 10s silent background polling
     const pollTimer = window.setInterval(loadMarketplace, 10000);
-    return () => window.clearInterval(pollTimer);
+    const refresh = () => loadMarketplace();
+    window.addEventListener("energy-trade-updated", refresh);
+    return () => {
+      window.clearInterval(pollTimer);
+      window.removeEventListener("energy-trade-updated", refresh);
+    };
   }, []);
 
   const loadMarketplace = async () => {
@@ -174,12 +179,27 @@ export default function ProducerMarketplace() {
         ? response.data
         : [];
 
+      // Producer accounts keep the same username when they switch modes.
+      // Hide every listing from that account in its consumer marketplace view.
+      const username = localStorage.getItem("username")?.trim().toLowerCase();
+      const isProsumer = localStorage.getItem("user_role")?.toLowerCase() === "producer";
+      const visibleListings = isProsumer
+        ? raw.filter((item) => item.producer?.trim().toLowerCase() !== username)
+        : raw;
+
+      const balanceResponse = await axios.get(`${API}/trading/balances`);
+      const balances = balanceResponse.data || {};
+
       const seen = new Map();
-      for (const item of raw) {
+      for (const item of visibleListings) {
         if (Number(item.energy) <= 0) continue;
-        const existing = seen.get(item.producer);
+        const producerKey = item.producer?.trim().toLowerCase();
+        const existing = seen.get(producerKey);
         if (!existing || item.id > existing.id) {
-          seen.set(item.producer, item);
+          seen.set(producerKey, {
+            ...item,
+            availableEnergy: Number(balances[producerKey] ?? item.energy),
+          });
         }
       }
 
@@ -907,7 +927,7 @@ function ProducerRow({
       {/* Energy */}
 
       <td>
-        {item.energy} kWh
+        {Number(item.availableEnergy ?? item.energy).toFixed(2)} kWh
       </td>
 
       {/* Price */}

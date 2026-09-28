@@ -26,6 +26,10 @@ function startOfDay(date) {
   return result;
 }
 
+function localDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function isInSelectedPeriod(date, range, currentDate) {
   if (range === "Day") {
     return date.toDateString() === currentDate.toDateString();
@@ -62,7 +66,7 @@ function bucketForSelectedPeriod(date, range) {
   if (range === "Week") {
     const day = startOfDay(date);
     return {
-      key: `day-${day.toISOString().slice(0, 10)}`,
+      key: `day-${localDateKey(day)}`,
       timestamp: day.getTime(),
       label: weekdayLabel.format(day),
     };
@@ -71,7 +75,7 @@ function bucketForSelectedPeriod(date, range) {
   if (range === "Month") {
     const day = startOfDay(date);
     return {
-      key: `day-${day.toISOString().slice(0, 10)}`,
+      key: `day-${localDateKey(day)}`,
       timestamp: day.getTime(),
       label: String(day.getDate()),
     };
@@ -85,19 +89,71 @@ function bucketForSelectedPeriod(date, range) {
   };
 }
 
+function bucketsForPeriod(range, currentDate) {
+  const buckets = [];
+
+  if (range === "Day") {
+    for (let hour = 0; hour < 24; hour += 1) {
+      const date = startOfDay(currentDate);
+      date.setHours(hour);
+      buckets.push(bucketForSelectedPeriod(date, range));
+    }
+    return buckets;
+  }
+
+  if (range === "Week") {
+    const date = weekStart(currentDate);
+    for (let day = 0; day < 7; day += 1) {
+      const bucketDate = new Date(date);
+      bucketDate.setDate(date.getDate() + day);
+      buckets.push(bucketForSelectedPeriod(bucketDate, range));
+    }
+    return buckets;
+  }
+
+  if (range === "Month") {
+    const daysInMonth = new Date(
+      currentDate.getFullYear(),
+      currentDate.getMonth() + 1,
+      0
+    ).getDate();
+    for (let day = 1; day <= daysInMonth; day += 1) {
+      buckets.push(
+        bucketForSelectedPeriod(
+          new Date(currentDate.getFullYear(), currentDate.getMonth(), day),
+          range
+        )
+      );
+    }
+    return buckets;
+  }
+
+  for (let month = 0; month < 12; month += 1) {
+    buckets.push(
+      bucketForSelectedPeriod(new Date(currentDate.getFullYear(), month, 1), range)
+    );
+  }
+  return buckets;
+}
+
 /**
  * Filter completed transactions to the selected current calendar period and
  * derive the graph buckets and totals from those same records.
  */
 export function buildPeriodAnalytics(transactions, range, now = new Date()) {
   const currentDate = new Date(now);
-  const buckets = new Map();
+  const buckets = new Map(
+    bucketsForPeriod(range, currentDate).map((bucket) => [
+      bucket.key,
+      { ...bucket, amount: 0, energy: 0, trades: 0 },
+    ])
+  );
   let amount = 0;
   let energy = 0;
   let trades = 0;
 
   transactions.forEach((transaction) => {
-    if (transaction.status !== "Completed" || !transaction.created_at) {
+    if (String(transaction.status || "").toLowerCase() !== "completed" || !transaction.created_at) {
       return;
     }
 
@@ -111,13 +167,8 @@ export function buildPeriodAnalytics(transactions, range, now = new Date()) {
     }
 
     const bucket = bucketForSelectedPeriod(transactionDate, range);
-    const existing = buckets.get(bucket.key) || {
-      label: bucket.label,
-      timestamp: bucket.timestamp,
-      amount: 0,
-      energy: 0,
-      trades: 0,
-    };
+    const existing = buckets.get(bucket.key);
+    if (!existing) return;
 
     existing.amount += Number(transaction.total_amount || 0);
     existing.energy += Number(transaction.energy || 0);

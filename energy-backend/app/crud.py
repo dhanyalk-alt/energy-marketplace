@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import (
@@ -188,6 +188,18 @@ async def accept_request(
 
     db.add(transaction)
 
+    # Only accounts registered as producers accrue purchased energy to their
+    # producer inventory. Regular consumer accounts retain existing behavior.
+    buyer_result = await db.execute(
+        select(User).where(User.username == request.consumer)
+    )
+    buyer = buyer_result.scalar_one_or_none()
+    if buyer is not None and str(buyer.role).lower() == "producer":
+        buyer.producer_inventory_kwh = round(
+            float(buyer.producer_inventory_kwh or 0) + float(request.energy),
+            2,
+        )
+
     await db.commit()
 
     await db.refresh(request)
@@ -256,7 +268,7 @@ async def create_trading(
     result = await db.execute(
         select(Trading)
         .where(
-            Trading.producer == producer,
+            func.lower(func.trim(Trading.producer)) == producer.strip().lower(),
             Trading.status == "Available",
         )
         .order_by(Trading.id.desc())
@@ -484,7 +496,7 @@ async def get_market_data(
         .where(
             Trading.energy > 0,
             Trading.status == "Available",
-            Trading.producer != current_producer,
+            func.lower(func.trim(Trading.producer)) != current_producer.strip().lower(),
         )
         .order_by(
             Trading.price.asc()
@@ -496,7 +508,7 @@ async def get_market_data(
     # offer, and the final list is ordered by selling price.
     latest_by_producer = {}
     for listing in result.scalars().all():
-        latest_by_producer.setdefault(listing.producer, listing)
+        latest_by_producer.setdefault(listing.producer.strip().casefold(), listing)
     listings = sorted(
         latest_by_producer.values(),
         key=lambda listing: (float(listing.price), -listing.id),
@@ -576,7 +588,7 @@ async def get_market_listings(
         .where(
             Trading.energy > 0,
             Trading.status == "Available",
-            Trading.producer != current_producer,
+            func.lower(func.trim(Trading.producer)) != current_producer.strip().lower(),
         )
         .order_by(
             Trading.price.asc()
