@@ -1448,8 +1448,8 @@ export default function Trading() {
         <div role="dialog" aria-modal="true" aria-label="Negotiation Request" style={{ position: "fixed", inset: 0, zIndex: 52, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "rgba(44,34,30,.65)" }}>
           <div style={{ width: "min(720px, 92vw)", maxHeight: "90vh", overflowY: "auto", padding: "30px 32px", borderRadius: 18, border: "1px solid #d8c8b0", background: "#fefcf9", color: "#2c221e", boxShadow: "0 24px 75px rgba(44,34,30,.22)" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 18 }}>
-              <div><h2 style={{ margin: 0, fontSize: 27 }}>🟣 Negotiated Request Details</h2><p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 17 }}><strong style={{ color: "#fff" }}>{selectedNegotiation.consumer}</strong> · Request #{selectedNegotiation.displayId ?? selectedNegotiation.id} · {selectedNegotiation.energy} kWh</p></div>
-              <button type="button" onClick={() => setSelectedNegotiation(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#fff", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
+              <div><h2 style={{ margin: 0, fontSize: 27 }}>🟣 Negotiated Request Details</h2><p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 17 }}><strong style={{ color: "#4A2E18" }}>{selectedNegotiation.consumer}</strong> · Request #{selectedNegotiation.displayId ?? selectedNegotiation.id} · {selectedNegotiation.energy} kWh</p></div>
+              <button type="button" onClick={() => setSelectedNegotiation(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#1E293B", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
             </div>
 
             <section style={{ marginTop: 25 }}>
@@ -1462,18 +1462,18 @@ export default function Trading() {
             </section>
 
             <section style={{ marginTop: 18, padding: 18, borderRadius: 12, background: "#faf7f2" }}>
-              <h3 style={{ margin: 0, color: "#fff", fontSize: 18 }}>🕒 Recorded negotiation events</h3>
+              <h3 style={{ margin: 0, color: "#4A2E18", fontSize: 18 }}>🕒 Recorded negotiation events</h3>
               <div style={{ marginTop: 13, display: "grid", gap: 9, color: "#6e6056", fontSize: 16, lineHeight: 1.45 }}>
-                <div><strong style={{ color: "#fff" }}>Negotiation created:</strong> {formatDateTime(selectedNegotiation.created_at)}</div>
-                <div><strong style={{ color: "#fff" }}>Current/final status:</strong> {selectedNegotiation.status || "Pending"}</div>
+                <div><strong style={{ color: "#4A2E18" }}>Negotiation created:</strong> {formatDateTime(selectedNegotiation.created_at)}</div>
+                <div><strong style={{ color: "#4A2E18" }}>Current/final status:</strong> {selectedNegotiation.status || "Pending"}</div>
                 <div style={{ fontSize: 14 }}>This request stores its initial price, consumer counter-offer, and final agreed price above. No separate per-message negotiation logs were recorded for this request.</div>
               </div>
             </section>
 
             <section style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#faf7f2" }}>
-              <h3 style={{ margin: 0, color: "#fff", fontSize: 18 }}>👤 Consumer Information</h3>
+              <h3 style={{ margin: 0, color: "#4A2E18", fontSize: 18 }}>👤 Consumer Information</h3>
               <p style={{ margin: "13px 0 0", color: "#6e6056", fontSize: 16 }}>Urgency: <strong style={{ color: selectedNegotiation.urgency === "Critical" ? "#ff9b93" : selectedNegotiation.urgency === "Essential" ? "#ffbd75" : "#80d89c" }}>{selectedNegotiation.urgency || "Normal"}</strong></p>
-              <p style={{ margin: "10px 0 0", color: "#6e6056", fontSize: 16, lineHeight: 1.55 }}>Consumer&apos;s Reason: <span style={{ color: "#fff" }}>{selectedNegotiation.reason || "Not provided"}</span></p>
+              <p style={{ margin: "10px 0 0", color: "#6e6056", fontSize: 16, lineHeight: 1.55 }}>Consumer&apos;s Reason: <span style={{ color: "#4A2E18" }}>{selectedNegotiation.reason || "Not provided"}</span></p>
             </section>
 
             {actionErrors[`negotiation-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}`] && <p style={{ margin: "16px 0 0", color: "#ff9b93", fontSize: 15 }}>{actionErrors[`negotiation-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}`]}</p>}
@@ -1490,7 +1490,7 @@ export default function Trading() {
           <div style={{ width: "min(650px, 92vw)", padding: "28px 30px", borderRadius: 18, border: "1px solid #d8c8b0", background: "#fefcf9", color: "#2c221e", boxShadow: "0 24px 75px rgba(44,34,30,.22)" }}>
             <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 18 }}>
               <div><h2 style={{ margin: 0, fontSize: 25 }}>🟦 Direct Buying Request</h2><p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 16 }}>Request details only. Use the table action buttons to accept or reject.</p></div>
-              <button type="button" onClick={() => setSelectedDirectRequest(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#fff", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
+              <button type="button" onClick={() => setSelectedDirectRequest(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#1E293B", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
             </div>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 18, marginTop: 24 }}>
               <div><div style={{ color: "#6e6056", fontSize: 14 }}>Consumer</div><strong style={{ display: "block", marginTop: 5, fontSize: 20 }}>{selectedDirectRequest.consumer}</strong></div>
@@ -1530,24 +1530,24 @@ export default function Trading() {
                   Compared across all {priorityRecommendation?.requests?.length || 0} pending request{priorityRecommendation?.requests?.length === 1 ? "" : "s"}. Your decision remains final.
                 </p>
               </div>
-              <button type="button" onClick={() => setShowPriorityPopup(false)} style={{ border: "none", background: "transparent", color: "#ffffff", fontSize: 30, lineHeight: 1, cursor: "pointer" }} aria-label="Close">×</button>
+              <button type="button" onClick={() => setShowPriorityPopup(false)} style={{ border: "none", background: "transparent", color: "#1E293B", fontSize: 30, lineHeight: 1, cursor: "pointer" }} aria-label="Close">×</button>
             </div>
 
             <div style={{ marginTop: 24, padding: "22px 24px", background: "#faf7f2", border: "1px solid #e6decb", borderRadius: 14 }}>
               <div style={{ display: "flex", justifyContent: "space-between", gap: 18 }}>
-                <div><div style={{ color: "#6e6056", fontSize: 15, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recommended consumer</div><strong style={{ color: "#ffffff", fontSize: 25 }}>{recommendedRequest.consumer}</strong></div>
+                <div><div style={{ color: "#6e6056", fontSize: 15, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recommended consumer</div><strong style={{ color: "#1E293B", fontSize: 25 }}>{recommendedRequest.consumer}</strong></div>
                 <div style={{ textAlign: "right" }}><div style={{ color: "#6e6056", fontSize: 15, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Priority level</div><strong style={{ color: "#859b32", fontSize: 24 }}>{recommendedRequest.priority_level} · {recommendedRequest.score}/100</strong></div>
               </div>
-              <p style={{ margin: "18px 0 0", color: "#ffffff", lineHeight: 1.6, fontSize: 18 }}><strong>Why: </strong>{recommendedRequest.explanation}</p>
+              <p style={{ margin: "18px 0 0", color: "#1E293B", lineHeight: 1.6, fontSize: 18 }}><strong>Why: </strong>{recommendedRequest.explanation}</p>
             </div>
 
             <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "20px 28px", fontSize: 16, lineHeight: 1.5 }}>
-              <div style={{ color: "#6e6056" }}>Reason<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.reason}</span></div>
+              <div style={{ color: "#6e6056" }}>Reason<br /><span style={{ color: "#1E293B", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.reason}</span></div>
               <div style={{ color: "#6e6056" }}>Urgency<br /><span style={{ color: "#ffbd75", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.urgency}</span></div>
-              <div style={{ color: "#6e6056" }}>Energy required<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.energy} kWh</span></div>
+              <div style={{ color: "#6e6056" }}>Energy required<br /><span style={{ color: "#1E293B", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.energy} kWh</span></div>
               <div style={{ color: "#6e6056" }}>Offered price<br /><span style={{ color: "#859b32", fontSize: 18, fontWeight: 600 }}>₹{recommendedRequest.offered_price}/kWh</span></div>
-              <div style={{ color: "#6e6056" }}>Consumer reliability<br /><span style={{ color: "#ffffff", fontSize: 17, fontWeight: 600 }}>{recommendedRequest.reliability?.score}/100 — {recommendedRequest.reliability?.explanation}</span></div>
-              <div style={{ color: "#6e6056" }}>Available producer energy<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{priorityRecommendation?.available_energy ?? 0} kWh</span></div>
+              <div style={{ color: "#6e6056" }}>Consumer reliability<br /><span style={{ color: "#1E293B", fontSize: 17, fontWeight: 600 }}>{recommendedRequest.reliability?.score}/100 — {recommendedRequest.reliability?.explanation}</span></div>
+              <div style={{ color: "#6e6056" }}>Available producer energy<br /><span style={{ color: "#1E293B", fontSize: 18, fontWeight: 600 }}>{priorityRecommendation?.available_energy ?? 0} kWh</span></div>
             </div>
 
             <button type="button" className="tr-btn-primary" onClick={() => setShowPriorityPopup(false)} style={{ marginTop: 28, minHeight: 54, fontSize: 19 }}>Review Requests</button>

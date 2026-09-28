@@ -6,6 +6,8 @@ import {
   Cpu,
   FolderOpen,
   LockKeyhole,
+  Eye,
+  EyeOff,
   Phone,
   RefreshCw,
   Sun,
@@ -50,6 +52,7 @@ export default function AuthGateway({ onLoginSuccess }) {
   const [username, setUsername] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState("");
   const [role, setRole] = useState("producer");
   const [errors, setErrors] = useState(emptyErrors);
@@ -67,6 +70,8 @@ export default function AuthGateway({ onLoginSuccess }) {
   // Open modal with specific tab
   const openAuthModal = (tab = "login") => {
     setActiveTab(tab);
+    if (tab === "login") setPassword("");
+    setShowPassword(false);
     setErrors(emptyErrors);
     setSuccessMessage("");
     setIsAuthModalOpen(true);
@@ -161,6 +166,8 @@ export default function AuthGateway({ onLoginSuccess }) {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
+    if (tab === "login") setPassword("");
+    setShowPassword(false);
     setErrors(emptyErrors);
     setSuccessMessage("");
   };
@@ -168,8 +175,11 @@ export default function AuthGateway({ onLoginSuccess }) {
   const validate = () => {
     const next = { ...emptyErrors };
     if (!username.trim()) next.username = "Required to fill";
-    if (activeTab === "register" && !phoneNumber.trim()) {
-      next.phoneNumber = "Required to fill";
+    if (activeTab === "register") {
+      if (!phoneNumber) next.phoneNumber = "Required to fill";
+      else if (!/^\d{10}$/.test(phoneNumber)) {
+        next.phoneNumber = "Enter exactly 10 digits";
+      }
     }
     if (!password) {
       next.password = "Required to fill";
@@ -508,8 +518,10 @@ export default function AuthGateway({ onLoginSuccess }) {
                       type="tel"
                       autoComplete="tel"
                       value={phoneNumber}
-                      onChange={(event) => setPhoneNumber(event.target.value)}
-                      placeholder="+91 XXXXX XXXXX"
+                      maxLength={10}
+                      inputMode="numeric"
+                      onChange={(event) => setPhoneNumber(event.target.value.replace(/\D/g, "").slice(0, 10))}
+                      placeholder="10-digit phone number"
                     />
                   )}
                   <fieldset className="energix-role-fieldset">
@@ -541,19 +553,26 @@ export default function AuthGateway({ onLoginSuccess }) {
                   "password",
                   "Password",
                   <LockKeyhole size={18} />,
+                  <>
                   <input
                     id="password"
                     name="password"
-                    type="password"
-                    autoComplete={
-                      activeTab === "login"
-                        ? "current-password"
-                        : "new-password"
-                    }
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="new-password"
                     value={password}
                     onChange={(event) => setPassword(event.target.value)}
-                    placeholder="Enter your password"
+                    placeholder="Enter password"
                   />
+                  <button
+                    type="button"
+                    className="energix-password-toggle"
+                    onClick={() => setShowPassword((visible) => !visible)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-pressed={showPassword}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                  </>
                 )}
                 {activeTab === "register" && (
                   <ul

@@ -8,7 +8,7 @@ import EnergyFlowMap from "./EnergyFlowMap";
 import ReviewProducers from "./ReviewProducers";
 import Settings from "./Settings";
 
-export default function ConsumerLayout({ onLogout }) {
+export default function ConsumerLayout({ onSwitchToProducer, onLogout }) {
   const [activeTab, setActiveTab] = useState("overview");
   const [selectedProducer, setSelectedProducer] = useState(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -18,6 +18,8 @@ export default function ConsumerLayout({ onLogout }) {
   // ============================================================
 
   const username = localStorage.getItem("username");
+  const canSwitchToProducer =
+    localStorage.getItem("user_role")?.toLowerCase() === "producer";
 
   // ============================================================
   // PAGE CONTENT
@@ -346,6 +348,30 @@ export default function ConsumerLayout({ onLogout }) {
                   Consumer account
                 </div>
               </div>
+
+              {canSwitchToProducer && (
+                <button
+                  onClick={() => {
+                    setMenuOpen(false);
+                    if (onSwitchToProducer) onSwitchToProducer();
+                  }}
+                  style={{
+                    width: "100%",
+                    padding: "12px",
+                    border: "none",
+                    borderRadius: "9px",
+                    backgroundColor: "#eff6ff",
+                    color: "#2563eb",
+                    cursor: "pointer",
+                    textAlign: "left",
+                    fontSize: "13px",
+                    fontWeight: "600",
+                    marginBottom: "7px",
+                  }}
+                >
+                  🔄 Switch to Producer
+                </button>
+              )}
 
               <button
                 onClick={() => {

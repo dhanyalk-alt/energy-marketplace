@@ -373,15 +373,15 @@ export default function ProducerOverview() {
         />
         <StatCard
           label="Revenue"
-          value={`₹${stats.earnings.toLocaleString()}`}
-          unit="total earnings"
+          value={`₹${stats.earnings.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+          unit="total revenue"
           accent={C.gold}
           icon="💰"
         />
         <StatCard
           label="Energy Sold"
-          value={stats.energySold}
-          unit="kWh sold"
+          value={stats.energySold.toLocaleString("en-IN")}
+          unit="total energy sold"
           accent={C.cyan}
           icon="📦"
         />

@@ -483,11 +483,12 @@
   max-height: 92vh;
   overflow-y: auto;
   overflow-x: hidden;
-  background: rgba(19, 31, 48, 0.96);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: #f8fafc;
+  color: #172033;
+  border: 1px solid #e2e8f0;
   border-radius: 28px;
   padding: 40px clamp(24px, 5vw, 44px);
-  box-shadow: 0 25px 75px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 25px 75px rgba(15, 23, 42, 0.28), 0 0 0 1px rgba(15, 23, 42, 0.04);
   animation: modalSlideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -507,7 +508,7 @@
   width: 6px;
 }
 .auth-modal-dialog::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.16);
+  background: #cbd5e1;
   border-radius: 10px;
 }
 
@@ -519,9 +520,9 @@
   width: 38px;
   height: 38px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--text-muted);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  color: #64748b;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -530,8 +531,8 @@
 }
 
 .auth-modal-close:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: #f1f5f9;
+  color: #172033;
   transform: rotate(90deg);
 }
 
@@ -558,13 +559,13 @@
   font-family: "Space Grotesk", sans-serif;
   font-size: 1.85rem;
   font-weight: 800;
-  color: #ffffff;
+  color: #172033;
   margin: 0 0 6px;
   letter-spacing: -0.02em;
 }
 
 .auth-modal-brand-header p {
-  color: var(--text-muted);
+  color: #64748b;
   font-size: 0.9rem;
   margin: 0;
 }
@@ -578,16 +579,16 @@
   width: 100%;
   max-width: 320px;
   margin: 0 auto 28px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid #e2e8f0;
   border-radius: 999px;
-  background: rgba(11, 20, 32, 0.7);
+  background: #eef2f7;
 }
 
 .energix-tabs button {
   border: 0;
   padding: 10px 16px;
   border-radius: 999px;
-  color: var(--text-muted);
+  color: #64748b;
   background: transparent;
   cursor: pointer;
   font: 700 0.88rem "DM Sans", sans-serif;
@@ -615,7 +616,7 @@
 .energix-field label,
 .energix-role-fieldset legend {
   display: block;
-  color: var(--text-main);
+  color: #334155;
   margin: 0 0 8px;
   font-size: 0.95rem;
   font-weight: 600;
@@ -627,9 +628,9 @@
   gap: 12px;
   height: 52px;
   padding: 0 16px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid #cbd5e1;
   border-radius: 14px;
-  background: rgba(11, 20, 32, 0.75);
+  background: #ffffff;
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -648,18 +649,35 @@
   color: var(--primary-gold);
 }
 
+.energix-password-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  padding: 4px;
+  border: 0;
+  color: #64748b;
+  background: transparent;
+  cursor: pointer;
+}
+
+.energix-password-toggle:hover,
+.energix-password-toggle:focus-visible {
+  color: #172033;
+}
+
 .energix-input-shell input {
   width: 100%;
   min-width: 0;
   border: 0;
   outline: 0;
-  color: #ffffff;
+  color: #172033;
   background: transparent;
   font: 500 1rem "DM Sans", sans-serif;
 }
 
 .energix-input-shell input::placeholder {
-  color: var(--text-dim);
+  color: #94a3b8;
 }
 
 .energix-input-shell select {
@@ -667,15 +685,15 @@
   height: 100%;
   border: 0;
   outline: 0;
-  color: #ffffff;
+  color: #172033;
   background: transparent;
   font: 500 1rem "DM Sans", sans-serif;
   cursor: pointer;
 }
 
 .energix-input-shell select option {
-  background: #131f30;
-  color: #ffffff;
+  background: #ffffff;
+  color: #172033;
 }
 
 .energix-field-error,
@@ -688,7 +706,7 @@
 
 .energix-field-error,
 .energix-form-error {
-  color: var(--accent-red);
+  color: #b42318;
 }
 
 .energix-form-error {
@@ -697,7 +715,7 @@
 }
 
 .energix-success {
-  color: var(--accent-green);
+  color: #15803d;
   text-align: center;
 }
 
@@ -709,7 +727,7 @@
   padding: 0;
   margin: 10px 0 0;
   list-style: none;
-  color: var(--text-dim);
+  color: #64748b;
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -726,11 +744,11 @@
 }
 
 .energix-password-requirements .met {
-  color: var(--accent-green);
+  color: #15803d;
 }
 
 .energix-password-requirements .unmet {
-  color: var(--accent-red);
+  color: #b42318;
 }
 
 /* Role Options */
@@ -754,18 +772,18 @@
   gap: 8px;
   min-height: 48px;
   padding: 8px 12px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid #cbd5e1;
   border-radius: 12px;
-  color: var(--text-muted);
-  background: rgba(11, 20, 32, 0.75);
+  color: #475569;
+  background: #ffffff;
   cursor: pointer;
   font: 700 0.88rem "DM Sans", sans-serif;
   transition: all 0.2s ease;
 }
 
 .energix-role-options button:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.3);
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
 .energix-role-options button.selected {

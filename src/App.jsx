@@ -23,6 +23,10 @@ const handleLogout = () => {
     setUserRole('consumer');
   };
 
+  const handleSwitchToProducer = () => {
+    setUserRole('producer');
+  };
+
   return (
     <>
       {userRole === 'guest' && (
@@ -38,6 +42,7 @@ const handleLogout = () => {
       
       {userRole === 'consumer' && (
         <ConsumerLayout 
+          onSwitchToProducer={handleSwitchToProducer}
           onLogout={handleLogout} 
         />
       )}
