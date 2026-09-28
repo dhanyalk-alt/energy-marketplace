@@ -64,3 +64,10 @@
 
     transition:.5s;
 }
+
+.aq-card { background:#f9f5e9; border:1.5px solid #c7baa0; border-radius:18px; padding:20px; min-height:210px; box-shadow:3px 4px 0 rgba(32,32,30,.08); }
+.aq-card:hover { transform:none; }
+.aq-header { color:#20201e; font-size:17px; font-weight:700; }
+.aq-status { margin-top:14px; font-size:28px; }
+.aq-value { margin-top:8px; font-size:15px; color:#625d53; }
+.aq-bar { margin-top:18px; }

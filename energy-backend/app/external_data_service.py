@@ -58,9 +58,12 @@ async def get_weather(latitude: float, longitude: float, days: int = 2) -> dict[
             response.raise_for_status()
             return response.json()
     except httpx.HTTPStatusError:
-        raise ExternalDataError("Weather information is unavailable right now.")
+        # A configured WeatherAPI credential can be expired, quota-limited, or
+        # temporarily rejected. Forecasting should remain usable with the
+        # existing no-key Open-Meteo fallback instead of returning a 503.
+        return await _get_open_meteo_weather(latitude, longitude, days)
     except httpx.HTTPError:
-        raise ExternalDataError("The server could not reach the weather service.")
+        return await _get_open_meteo_weather(latitude, longitude, days)
 
 
 def _weather_condition(code: int, is_day: bool = True) -> dict[str, str]:
@@ -130,13 +133,19 @@ async def _get_open_meteo_weather(latitude: float, longitude: float, days: int) 
         async with httpx.AsyncClient(timeout=12.0) as client:
             forecast_response = await client.get(OPEN_METEO_URL, params=forecast_params)
             forecast_response.raise_for_status()
-            air_response = await client.get(OPEN_METEO_AIR_URL, params=air_params)
-            air_response.raise_for_status()
     except httpx.HTTPError:
         raise ExternalDataError("Weather information is unavailable right now.")
 
     source = forecast_response.json()
-    air = air_response.json().get("current", {})
+    # Air quality is optional for the forecast page. Do not discard valid
+    # weather information just because this secondary public service fails.
+    try:
+        async with httpx.AsyncClient(timeout=12.0) as client:
+            air_response = await client.get(OPEN_METEO_AIR_URL, params=air_params)
+            air_response.raise_for_status()
+        air = air_response.json().get("current", {})
+    except httpx.HTTPError:
+        air = {}
     current = source.get("current", {})
     hourly = source.get("hourly", {})
     daily = source.get("daily", {})

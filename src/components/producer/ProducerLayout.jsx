@@ -104,7 +104,7 @@ export default function ProducerLayout({
         fontFamily:
           "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
 
-        backgroundColor: "#f8fafc",
+        backgroundColor: "#faf7f2",
 
         overflow: "hidden",
 
@@ -122,7 +122,7 @@ export default function ProducerLayout({
 
           width: "100%",
 
-          borderBottom: "1px solid #e5e7eb",
+          borderBottom: "1px solid #e6decb",
 
           display: "flex",
           alignItems: "center",
@@ -130,7 +130,7 @@ export default function ProducerLayout({
 
           padding: "0 32px",
 
-          backgroundColor: "#ffffff",
+          backgroundColor: "#fefcf9",
 
           position: "relative",
 
@@ -433,7 +433,7 @@ export default function ProducerLayout({
             overflowY: "auto",
             overflowX: "hidden",
 
-            backgroundColor: "#f8fafc",
+            backgroundColor: "#faf7f2",
 
             boxSizing: "border-box",
           }}
@@ -454,9 +454,9 @@ export default function ProducerLayout({
 
             height: "100%",
 
-            backgroundColor: "#ffffff",
+            backgroundColor: "#fefcf9",
 
-            border: "1px solid #e5e7eb",
+            border: "1px solid #e6decb",
 
             borderRadius: "22px",
 
@@ -517,14 +517,14 @@ export default function ProducerLayout({
           padding: "9px",
 
           backgroundColor:
-            "rgba(255,255,255,0.97)",
+            "rgba(254,252,249,0.97)",
 
           backdropFilter: "blur(16px)",
 
           WebkitBackdropFilter:
             "blur(16px)",
 
-          border: "1px solid #e5e7eb",
+          border: "1px solid #e6decb",
 
           borderRadius: "20px",
 
@@ -561,12 +561,12 @@ export default function ProducerLayout({
                 borderRadius: "15px",
 
                 backgroundColor: active
-                  ? "#eff6ff"
+                  ? "#efe9de"
                   : "transparent",
 
                 color: active
-                  ? "#2563eb"
-                  : "#6b7280",
+                  ? "#859b32"
+                  : "#6e6056",
 
                 cursor: "pointer",
 

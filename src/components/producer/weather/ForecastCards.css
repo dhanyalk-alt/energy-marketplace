@@ -1,12 +1,12 @@
 .forecast-section {
-  margin-top: 30px;
+  margin-top: 0;
 }
 
 .forecast-title {
   margin-bottom: 15px;
-  font-size: 22px;
-  font-weight: 600;
-  color: #202124;
+  font-size: 27px;
+  font-weight: 700;
+  color: #20201e;
 }
 
 .forecast-container {
@@ -14,11 +14,11 @@
   justify-content: space-between;
   gap: 12px;
 
-  background: #ffffff;
-  border-radius: 24px;
+  background: #f9f5e9;
+  border: 1.5px solid #c7baa0;
+  border-radius: 22px;
   padding: 18px;
-
-  box-shadow: 0 2px 10px rgba(60, 64, 67, 0.12);
+  box-shadow: 4px 5px 0 rgba(32,32,30,.10);
 
   overflow-x: auto;
 }
@@ -38,22 +38,22 @@
 }
 
 .forecast-item:hover {
-  background: #f8f9fa;
+  background: #efe5ce;
   transform: translateY(-3px);
 }
 
 .selected-card{
-    background:#eef5ff;
-    border:2px solid #4285F4;
+    background:#fff4cf;
+    border:2px solid #d5ad3d;
 }
 .forecast-item{
     cursor:pointer;
 }
 
 .day {
-  font-size: 15px;
-  font-weight: 600;
-  color: #202124;
+  font-size: 17px;
+  font-weight: 700;
+  color: #20201e;
   margin-bottom: 8px;
 }
 
@@ -65,12 +65,12 @@
 
 .temperature {
   margin: 0;
-  font-size: 16px;
+  font-size: 19px;
 }
 
 .max-temp {
   font-weight: 600;
-  color: #202124;
+  color: #20201e;
 }
 
 .slash {

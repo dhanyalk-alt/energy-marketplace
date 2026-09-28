@@ -13,18 +13,18 @@ const API = API_BASE_URL;
 // =========================================================
 
 const colors = {
-  bg: "#0B1420",
-  surface: "#131F30",
-  surfaceAlt: "#182742",
-  border: "rgba(255,255,255,0.07)",
-  text: "#EDF1F7",
-  textMuted: "#7C8BA3",
-  cyan: "#3FD0E0",
-  green: "#5FD98A",
-  orange: "#FF8A65",
-  red: "#FF6B6B",
-  violet: "#B98CF2",
-  amber: "#F2A93B",
+  bg: "#f0f7ff",
+  surface: "rgba(255, 255, 255, 0.92)",
+  surfaceAlt: "#ffffff",
+  border: "#bae6fd",
+  text: "#0f172a",
+  textMuted: "#475569",
+  cyan: "#0284c7",
+  green: "#10b981",
+  orange: "#f59e0b",
+  red: "#ef4444",
+  violet: "#7c3aed",
+  amber: "#d97706",
 };
 
 // =========================================================
@@ -35,36 +35,36 @@ const styleSheet = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 .rb-table th {
-  background: #182742 !important;
-  color: #9FB0C9 !important;
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
   font-weight: 700 !important;
-  font-size: 11px !important;
+  font-size: 12px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
   text-align: center !important;
   border: none !important;
-  border-bottom: 2px solid #B98CF2 !important;
-  padding: 12px 10px !important;
+  border-bottom: 2px solid #bae6fd !important;
+  padding: 14px 12px !important;
 }
 
 .rb-table th:first-child {
-  border-top-left-radius: 8px;
+  border-top-left-radius: 10px;
 }
 
 .rb-table th:last-child {
-  border-top-right-radius: 8px;
+  border-top-right-radius: 10px;
 }
 
 .rb-table td {
   text-align: center;
-  padding: 12px 10px;
-  color: #EDF1F7;
+  padding: 14px 12px;
+  color: #0f172a;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid #e0f2fe;
 }
 
 .rb-table tbody tr:hover {
-  background: rgba(255,255,255,0.025);
+  background: rgba(2, 132, 199, 0.04);
 }
 
 .rb-status {
@@ -156,16 +156,14 @@ export default function RequestBuying() {
   // LOAD NORMAL BUY REQUESTS
   // =======================================================
 
-  const loadRequests = async () => {
-
+  const loadRequests = async (silent = false) => {
     if (!username) {
       setRequests([]);
       return;
     }
 
     try {
-
-      setLoadingRequests(true);
+      if (!silent) setLoadingRequests(true);
 
       const response = await axios.get(
         `${API}/trading/requests`
@@ -203,16 +201,14 @@ export default function RequestBuying() {
   // LOAD CONSUMER TRANSACTIONS
   // =======================================================
 
-  const loadTransactions = async () => {
-
+  const loadTransactions = async (silent = false) => {
     if (!username) {
       setTransactions([]);
       return;
     }
 
     try {
-
-      setLoadingTransactions(true);
+      if (!silent) setLoadingTransactions(true);
 
       const response = await axios.get(
         `${API}/trading/transactions/consumer/${encodeURIComponent(
@@ -311,14 +307,12 @@ export default function RequestBuying() {
   // LOAD EVERYTHING
   // =======================================================
 
-  const loadAllData = async () => {
-
+  const loadAllData = async (silent = false) => {
     await Promise.all([
-      loadRequests(),
-      loadTransactions(),
-      loadNegotiations(),
+      loadRequests(silent),
+      loadTransactions(silent),
+      loadNegotiations(silent),
     ]);
-
   };
 
   // =======================================================
@@ -326,9 +320,11 @@ export default function RequestBuying() {
   // =======================================================
 
   useEffect(() => {
+    loadAllData(false);
 
-    loadAllData();
-
+    // 10s silent background polling
+    const pollTimer = window.setInterval(() => loadAllData(true), 10000);
+    return () => window.clearInterval(pollTimer);
   }, []);
 
   // =======================================================
@@ -355,19 +351,21 @@ export default function RequestBuying() {
 
     <div
       style={{
-        minHeight: "100vh",
+        minHeight: "100%",
 
         background:
-          `radial-gradient(
-            circle at 15% 0%,
-            #16233A 0%,
-            ${colors.bg} 55%
-          )`,
+          "linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 55%, #f8fafc 100%)",
+
+        borderRadius: "20px",
 
         padding: "32px 28px 60px",
 
         fontFamily:
           "Inter, sans-serif",
+
+        color: "#0f172a",
+
+        boxSizing: "border-box",
       }}
     >
 
@@ -398,7 +396,7 @@ export default function RequestBuying() {
 
           <div
             style={{
-              color: colors.violet,
+              color: "#0284c7",
 
               fontSize: 12,
 
@@ -464,10 +462,13 @@ export default function RequestBuying() {
           border:
             `1px solid ${colors.border}`,
 
-          borderRadius: 12,
+          borderRadius: 16,
 
           padding:
             "22px 24px",
+
+          boxShadow:
+            "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
         }}
       >
 
@@ -712,10 +713,13 @@ export default function RequestBuying() {
           border:
             `1px solid ${colors.border}`,
 
-          borderRadius: 12,
+          borderRadius: 16,
 
           padding:
             "22px 24px",
+
+          boxShadow:
+            "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
 
           marginTop: 20,
         }}
@@ -1049,7 +1053,7 @@ export default function RequestBuying() {
                           <button
                             onClick={() => acceptAiPrice(item.id)}
                             disabled={acceptingNegotiationId === item.id}
-                            style={{ border: "none", borderRadius: 7, padding: "8px 10px", background: "#5FD98A", color: "#07110B", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
+                            style={{ border: "none", borderRadius: 7, padding: "8px 10px", background: "linear-gradient(135deg, #10b981, #059669)", color: "#ffffff", fontWeight: 700, fontSize: 11, cursor: "pointer" }}
                           >
                             {acceptingNegotiationId === item.id
                               ? "Sending..."
@@ -1087,10 +1091,13 @@ export default function RequestBuying() {
           border:
             `1px solid ${colors.border}`,
 
-          borderRadius: 12,
+          borderRadius: 16,
 
           padding:
             "22px 24px",
+
+          boxShadow:
+            "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
 
           marginTop: 20,
         }}

@@ -50,6 +50,9 @@ async def startup():
         await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS reason VARCHAR(500)"))
         await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'"))
         await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS offered_price DOUBLE PRECISION"))
+        await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS negotiation_id INTEGER"))
+        await conn.execute(text("ALTER TABLE buy_requests ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITHOUT TIME ZONE"))
+        await conn.execute(text("CREATE INDEX IF NOT EXISTS ix_buy_requests_negotiation_id ON buy_requests (negotiation_id)"))
         await conn.execute(text("ALTER TABLE negotiations ADD COLUMN IF NOT EXISTS reason VARCHAR(500)"))
         await conn.execute(text("ALTER TABLE negotiations ADD COLUMN IF NOT EXISTS urgency VARCHAR(20) NOT NULL DEFAULT 'Normal'"))
 

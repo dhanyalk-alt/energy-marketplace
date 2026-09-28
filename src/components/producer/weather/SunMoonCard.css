@@ -66,3 +66,11 @@
 
     color:#202124;
 }
+
+.sunmoon-card { background:#f9f5e9; border:1.5px solid #c7baa0; border-radius:18px; padding:20px; min-height:210px; box-shadow:3px 4px 0 rgba(32,32,30,.08); }
+.sunmoon-card:hover { transform:none; }
+.sunmoon-title { font-size:17px; font-weight:700; color:#20201e; }
+.sunmoon-row { margin-top:12px; font-size:14px; color:#625d53; }
+.sunmoon-row strong, .moon-phase { color:#20201e; }
+.sunmoon-card hr { margin:14px 0; }
+.moon-phase { font-size:15px; }

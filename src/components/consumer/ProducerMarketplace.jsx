@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config";
 import BuyEnergyModal from "./BuyEnergyModal";
@@ -10,13 +10,13 @@ const API = API_BASE_URL;
 // ------------------------------------------------------------
 
 const colors = {
-  bg: "#0B1420",
-  surface: "#131F30",
-  border: "rgba(255,255,255,0.07)",
-  text: "#EDF1F7",
-  textMuted: "#7C8BA3",
-  green: "#5FD98A",
-  violet: "#B98CF2",
+  bg: "#f0f7ff",
+  surface: "rgba(255, 255, 255, 0.88)",
+  border: "#bae6fd",
+  text: "#0f172a",
+  textMuted: "#475569",
+  green: "#10b981",
+  violet: "#7c3aed",
   yellow: "#FBBF24",
 };
 
@@ -28,16 +28,16 @@ const styleSheet = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 .mk-table th {
-  background: #182742 !important;
-  color: #9FB0C9 !important;
+  background: #e0f2fe !important;
+  color: #0284c7 !important;
   font-weight: 700 !important;
-  font-size: 11px !important;
+  font-size: 13px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
   text-align: center !important;
   border: none !important;
-  border-bottom: 2px solid #B98CF2 !important;
-  padding: 12px 10px !important;
+  border-bottom: 2px solid #0284c7 !important;
+  padding: 14px 12px !important;
 }
 
 .mk-table th:first-child {
@@ -50,49 +50,49 @@ const styleSheet = `
 
 .mk-table td {
   text-align: center;
-  padding: 12px 10px;
-  color: #EDF1F7;
-  font-size: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 12px;
+  color: #0f172a;
+  font-size: 16px;
+  border-bottom: 1px solid #e0f2fe;
 }
 
 .mk-table tbody tr:hover {
-  background: rgba(255,255,255,0.025);
+  background: rgba(2, 132, 199, 0.04);
 }
 
 .mk-buy-btn {
-  background: linear-gradient(135deg, #5FD98A, #2FAE63);
-  color: #08210F;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
   border: none;
-  padding: 9px 18px;
-  border-radius: 6px;
+  padding: 10px 20px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-weight: 700;
-  font-size: 13px;
+  font-size: 14px;
   transition: transform 0.12s, box-shadow 0.12s;
 }
 
 .mk-buy-btn:hover {
   transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(95,217,138,0.28);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.28);
 }
 
 .mk-review-btn {
-  background: rgba(185,140,242,0.12);
-  color: #B98CF2;
-  border: 1px solid rgba(185,140,242,0.3);
-  padding: 8px 12px;
-  border-radius: 6px;
+  background: rgba(124, 58, 237, 0.08);
+  color: #7c3aed;
+  border: 1px solid rgba(124, 58, 237, 0.25);
+  padding: 9px 14px;
+  border-radius: 8px;
   cursor: pointer;
   font-family: 'Inter', sans-serif;
   font-weight: 600;
-  font-size: 12px;
+  font-size: 13px;
   transition: all 0.15s ease;
 }
 
 .mk-review-btn:hover {
-  background: rgba(185,140,242,0.2);
+  background: rgba(124, 58, 237, 0.14);
   transform: translateY(-1px);
 }
 `;
@@ -124,7 +124,7 @@ function Stars({ rating = 0 }) {
                 : "#475569",
           }}
         >
-          â˜…
+          ★
         </span>
       ))}
     </div>
@@ -156,6 +156,10 @@ export default function ProducerMarketplace() {
 
   useEffect(() => {
     loadMarketplace();
+
+    // 10s silent background polling
+    const pollTimer = window.setInterval(loadMarketplace, 10000);
+    return () => window.clearInterval(pollTimer);
   }, []);
 
   const loadMarketplace = async () => {
@@ -164,7 +168,22 @@ export default function ProducerMarketplace() {
         `${API}/trading/all`
       );
 
-      setProducers(response.data);
+      // Client-side defensive deduplication:
+      // keep only latest entry (highest id) per producer and purge energy <= 0
+      const raw = Array.isArray(response.data)
+        ? response.data
+        : [];
+
+      const seen = new Map();
+      for (const item of raw) {
+        if (Number(item.energy) <= 0) continue;
+        const existing = seen.get(item.producer);
+        if (!existing || item.id > existing.id) {
+          seen.set(item.producer, item);
+        }
+      }
+
+      setProducers(Array.from(seen.values()));
     } catch (err) {
       console.error(
         "Marketplace loading error:",
@@ -238,7 +257,7 @@ export default function ProducerMarketplace() {
       style={{
         minHeight: "100vh",
         background:
-          `radial-gradient(circle at 15% 0%, #16233A 0%, ${colors.bg} 55%)`,
+          `linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 55%, #f8fafc 100%)`,
         padding: "32px 28px 60px",
         fontFamily: "Inter, sans-serif",
       }}
@@ -258,21 +277,21 @@ export default function ProducerMarketplace() {
         <div
           style={{
             color: colors.violet,
-            fontSize: 12,
+            fontSize: 14,
             fontWeight: 600,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
             marginBottom: 6,
           }}
         >
-          Consumer Â· Market
+          Consumer · Market
         </div>
 
         <h1
           style={{
             fontFamily:
               "Space Grotesk, sans-serif",
-            fontSize: 30,
+            fontSize: 36,
             fontWeight: 700,
             color: colors.text,
             margin: 0,
@@ -285,7 +304,7 @@ export default function ProducerMarketplace() {
           style={{
             color: colors.textMuted,
             marginTop: 6,
-            fontSize: 14,
+            fontSize: 16,
           }}
         >
           Compare producers, ratings and reviews
@@ -300,10 +319,13 @@ export default function ProducerMarketplace() {
       <div
         style={{
           background: colors.surface,
+          backdropFilter: "blur(14px)",
+          WebkitBackdropFilter: "blur(14px)",
           border:
             `1px solid ${colors.border}`,
-          borderRadius: 12,
-          padding: "22px 24px",
+          borderRadius: 16,
+          padding: "24px 26px",
+          boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08), 0 4px 6px -4px rgba(2, 132, 199, 0.04)",
         }}
       >
         <div
@@ -359,7 +381,7 @@ export default function ProducerMarketplace() {
                     }}
                   >
                     No listings available
-                    right now â€” check back
+                    right now — check back
                     soon.
                   </td>
                 </tr>
@@ -412,7 +434,7 @@ export default function ProducerMarketplace() {
             position: "fixed",
             inset: 0,
             background:
-              "rgba(2,6,23,0.75)",
+              "rgba(0, 20, 60, 0.45)",
             backdropFilter:
               "blur(5px)",
             display: "flex",
@@ -432,13 +454,13 @@ export default function ProducerMarketplace() {
               maxHeight: "80vh",
               overflowY: "auto",
               background:
-                "#131F30",
+                "#ffffff",
               border:
-                "1px solid rgba(255,255,255,0.1)",
-              borderRadius: "16px",
-              padding: "24px",
+                "1px solid #bae6fd",
+              borderRadius: "18px",
+              padding: "28px",
               boxShadow:
-                "0 25px 70px rgba(0,0,0,0.45)",
+                "0 25px 70px rgba(2, 132, 199, 0.15)",
             }}
           >
             {/* Modal Header */}
@@ -489,23 +511,27 @@ export default function ProducerMarketplace() {
               <button
                 onClick={closeReviews}
                 style={{
-                  width: "34px",
-                  height: "34px",
+                  width: "36px",
+                  height: "36px",
                   borderRadius:
-                    "8px",
+                    "50%",
                   border:
-                    "1px solid rgba(255,255,255,0.1)",
+                    "none",
                   background:
-                    "rgba(255,255,255,0.04)",
+                    "rgba(2, 132, 199, 0.08)",
                   color:
-                    colors.text,
+                    colors.textMuted,
                   cursor:
                     "pointer",
                   fontSize:
-                    "18px",
+                    "20px",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
                 }}
               >
-                Ã—
+                ×
               </button>
             </div>
 
@@ -629,7 +655,7 @@ export default function ProducerMarketplace() {
                     color:
                       colors.textMuted,
                     background:
-                      "rgba(255,255,255,0.025)",
+                      "#f0f7ff",
                     borderRadius:
                       "10px",
                   }}
@@ -642,7 +668,7 @@ export default function ProducerMarketplace() {
                         "8px",
                     }}
                   >
-                    â­
+                    ⭐
                   </div>
 
                   <div
@@ -693,9 +719,9 @@ export default function ProducerMarketplace() {
                         key={review.id}
                         style={{
                           background:
-                            "rgba(255,255,255,0.035)",
+                            "#f8fafc",
                           border:
-                            "1px solid rgba(255,255,255,0.07)",
+                            "1px solid #e0f2fe",
                           borderRadius:
                             "11px",
                           padding:
@@ -757,7 +783,7 @@ export default function ProducerMarketplace() {
                               marginTop:
                                 "12px",
                               color:
-                                "#CBD5E1",
+                                "#334155",
                               fontSize:
                                 "13px",
                               lineHeight:
@@ -782,19 +808,21 @@ export default function ProducerMarketplace() {
                 marginTop:
                   "20px",
                 padding:
-                  "11px",
+                  "12px",
                 border:
-                  "1px solid rgba(255,255,255,0.1)",
+                  "1px solid #e2e8f0",
                 borderRadius:
-                  "8px",
+                  "10px",
                 background:
-                  "rgba(255,255,255,0.05)",
+                  "#f1f5f9",
                 color:
-                  colors.text,
+                  colors.textMuted,
                 cursor:
                   "pointer",
                 fontWeight:
                   "600",
+                fontSize:
+                  "15px",
               }}
             >
               Close
@@ -885,7 +913,7 @@ function ProducerRow({
       {/* Price */}
 
       <td>
-        â‚¹{item.price}
+        ₹{item.price}
       </td>
 
       {/* Rating */}
@@ -935,7 +963,7 @@ function ProducerRow({
                     "700",
                 }}
               >
-                â˜…
+                ★
               </span>
 
               <span
@@ -955,7 +983,7 @@ function ProducerRow({
                 color:
                   colors.textMuted,
                 fontSize:
-                  "10px",
+                  "12px",
                 marginTop:
                   "2px",
               }}
@@ -981,7 +1009,7 @@ function ProducerRow({
             )
           }
         >
-          ðŸ’¬ View Reviews
+          💬 View Reviews
         </button>
       </td>
 

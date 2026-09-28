@@ -8,7 +8,6 @@ import { useWeather } from "./useWeather";
 import ForecastCards from "./ForecastCards";
 import WeatherDetails from "./WeatherDetails";
 import EnergyInsights from "./EnergyInsights";
-import WeatherMap from "./WeatherMap";
 
 
 function Forecasting() {
@@ -20,7 +19,6 @@ function Forecasting() {
   latitude,
   longitude,
 } = useWeather();
-console.log(latitude, longitude);
   const [selectedTab, setSelectedTab] = useState("temperature");
   const [selectedDay, setSelectedDay] = useState(0);
 
@@ -67,19 +65,18 @@ console.log(latitude, longitude);
     selectedTab={selectedTab}
     selectedDay={selectedDay}
 />
-      <ForecastCards
+<ForecastCards
     weather={weather}
     selectedDay={selectedDay}
     setSelectedDay={setSelectedDay}
 />
-<WeatherDetails weather={weather} />
-<EnergyInsights weather={weather} />
-<WeatherMap
-  weather={weather}
-  place={place}
-  latitude={latitude}
-  longitude={longitude}
-/>
+      <section className="weather-energy-summary">
+        <h2 className="weather-energy-summary-title">
+          Today&apos;s Highlights &amp; Energy Insights
+        </h2>
+        <WeatherDetails weather={weather} showTitle={false} />
+        <EnergyInsights weather={weather} showTitle={false} />
+      </section>
     </div>
   );
 }

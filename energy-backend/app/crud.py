@@ -249,14 +249,37 @@ async def create_trading(
             "Price cannot be negative."
         )
 
-    trade = Trading(
-        producer=producer,
-        energy=energy,
-        price=price,
-        status="Available",
+    # A producer owns one current market offer. Reuse its newest active record
+    # so changing an amount or price overwrites the offer instead of creating
+    # duplicate rows. Older active records are retired rather than deleted to
+    # preserve any buy-request and transaction history that references them.
+    result = await db.execute(
+        select(Trading)
+        .where(
+            Trading.producer == producer,
+            Trading.status == "Available",
+        )
+        .order_by(Trading.id.desc())
     )
+    active_listings = result.scalars().all()
 
-    db.add(trade)
+    if active_listings:
+        trade = active_listings[0]
+        trade.energy = energy
+        trade.price = price
+        trade.status = "Available"
+
+        for stale_listing in active_listings[1:]:
+            stale_listing.energy = 0
+            stale_listing.status = "Replaced"
+    else:
+        trade = Trading(
+            producer=producer,
+            energy=energy,
+            price=price,
+            status="Available",
+        )
+        db.add(trade)
 
     await db.commit()
     await db.refresh(trade)
@@ -468,7 +491,16 @@ async def get_market_data(
         )
     )
 
-    listings = result.scalars().all()
+    # Defensive de-duplication also handles data created before the overwrite
+    # rule was introduced. The newest active record is the producer's current
+    # offer, and the final list is ordered by selling price.
+    latest_by_producer = {}
+    for listing in result.scalars().all():
+        latest_by_producer.setdefault(listing.producer, listing)
+    listings = sorted(
+        latest_by_producer.values(),
+        key=lambda listing: (float(listing.price), -listing.id),
+    )
 
     if not listings:
         return {

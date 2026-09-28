@@ -87,3 +87,10 @@
 
     color:#777;
 }
+
+.alert-card { background:#f9f5e9; border:1.5px solid #c7baa0; border-radius:18px; padding:20px; min-height:210px; box-shadow:3px 4px 0 rgba(32,32,30,.08); }
+.alert-card:hover { transform:none; }
+.alert-title { font-size:17px; font-weight:700; color:#20201e; }
+.no-alert { margin-top:26px; }
+.alert-icon { font-size:38px; }
+.no-alert p { margin-top:10px; color:#625d53; font-size:15px; }

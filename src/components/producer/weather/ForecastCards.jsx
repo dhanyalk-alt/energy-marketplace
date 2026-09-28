@@ -12,7 +12,7 @@ function ForecastCards({
   return (
     <div className="forecast-section">
 
-      <h3 className="forecast-title">7-Day Forecast</h3>
+      <h3 className="forecast-title">3-Day Forecast</h3>
 
       <div className="forecast-container">
         {forecast.map((day, index) => (

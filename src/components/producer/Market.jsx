@@ -5,45 +5,47 @@ import { API_BASE_URL } from "../../config";
 const API = API_BASE_URL;
 
 const colors = {
-  bg: "#0B1420",
-  surface: "#131F30",
-  surfaceAlt: "#182742",
-  border: "rgba(255,255,255,0.07)",
-  text: "#EDF1F7",
-  textMuted: "#7C8BA3",
-  cyan: "#3FD0E0",
-  green: "#5FD98A",
-  orange: "#FF8A65",
-  violet: "#B98CF2",
-  red: "#FF6B6B",
+  bg: "#faf7f2",
+  surface: "#fefcf9",
+  surfaceAlt: "#efe9de",
+  border: "#d8c8b0",
+  text: "#2c221e",
+  textMuted: "#6e6056",
+  cyan: "#859b32",
+  green: "#859b32",
+  orange: "#d97706",
+  violet: "#859b32",
+  red: "#991b1b",
+  greenGold: "#859b32",
+  warmBrown: "#4a3525",
 };
 
 const styleSheet = `
 @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 .market-table th {
-  background: #182742 !important;
-  color: #9FB0C9 !important;
+  background: #efe9de !important;
+  color: #4a3525 !important;
   font-weight: 700 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
   text-align: center !important;
   border: none !important;
-  border-bottom: 2px solid #3FD0E0 !important;
+  border-bottom: 2px solid #859b32 !important;
   padding: 13px 12px !important;
 }
 
 .market-table td {
   text-align: center;
   padding: 15px 12px;
-  color: #EDF1F7;
+  color: #2c221e;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid #e6decb;
 }
 
 .market-table tbody tr:hover {
-  background: rgba(255,255,255,0.025);
+  background: #f7f3ea;
 }
 
 .market-table th:first-child {
@@ -70,6 +72,10 @@ const styleSheet = `
 .market-buy:hover {
   transform: translateY(-1px);
   opacity: 0.9;
+}
+
+.market-legacy-macro-cards {
+  display: none !important;
 }
 
 @media (max-width: 850px) {
@@ -124,10 +130,12 @@ export default function Market() {
   // LOAD MARKET DATA
   // ==========================================================
 
-  const loadMarket = async () => {
+  const loadMarket = async (silent = false) => {
     try {
-      setLoading(true);
-      setIexLoading(true);
+      if (!silent) {
+        setLoading(true);
+        setIexLoading(true);
+      }
       setError("");
 
       if (!username) {
@@ -153,7 +161,18 @@ export default function Market() {
         ? producerResponse.data.listings
         : [];
 
-      setListings(marketListings);
+      // The API returns one current offer per producer. Keep this defensive
+      // client-side normalization for older data and always render low-to-high.
+      const latestByProducer = new Map();
+      marketListings.forEach((listing) => {
+        const current = latestByProducer.get(listing.producer);
+        if (!current || Number(listing.id) > Number(current.id)) {
+          latestByProducer.set(listing.producer, listing);
+        }
+      });
+      setListings([...latestByProducer.values()].sort(
+        (first, second) => Number(first.price || 0) - Number(second.price || 0),
+      ));
 
       // ======================================================
       // 2. LATEST IEX MARKET DATA
@@ -227,27 +246,20 @@ export default function Market() {
   // ==========================================================
 
   useEffect(() => {
-    loadMarket();
+    loadMarket(false);
+
+    // 10s silent background refresh maintains live market rates without page reload
+    const pollTimer = window.setInterval(() => loadMarket(true), 10000);
+    return () => window.clearInterval(pollTimer);
   }, [username]);
 
   // ==========================================================
   // CALCULATIONS
   // ==========================================================
 
-  const totalEnergy = listings.reduce(
-    (sum, item) =>
-      sum + Number(item.energy || 0),
-    0
-  );
-
-  const lowestPrice =
-    listings.length > 0
-      ? Math.min(
-          ...listings.map((item) =>
-            Number(item.price || 0)
-          )
-        )
-      : null;
+  const lowestListing = listings[0] || null;
+  const highestListing = listings[listings.length - 1] || null;
+  const lowestPrice = lowestListing ? Number(lowestListing.price || 0) : null;
 
   // ==========================================================
   // IEX PRICE
@@ -277,7 +289,7 @@ export default function Market() {
       style={{
         minHeight: "100vh",
         background:
-          `radial-gradient(circle at 85% 0%, #16233A 0%, ${colors.bg} 55%)`,
+          `linear-gradient(135deg, #faf7f2 0%, #f5f0eb 55%, #faf7f2 100%)`,
         padding: "32px 28px 60px",
         fontFamily: "Inter, sans-serif",
         boxSizing: "border-box",
@@ -347,8 +359,8 @@ export default function Market() {
           style={{
             border:
               `1px solid ${colors.border}`,
-            background: colors.surfaceAlt,
-            color: colors.text,
+            background: "linear-gradient(135deg, #5c4033, #4a3525)",
+            color: "#fefcf9",
             padding: "10px 16px",
             borderRadius: 8,
             cursor: loading
@@ -370,10 +382,7 @@ export default function Market() {
 
       <div
         style={{
-          background:
-            "rgba(63,208,224,0.07)",
-          border:
-            "1px solid rgba(63,208,224,0.15)",
+          background: "rgba(133,155,50,0.08)", border: "1px solid rgba(133,155,50,0.22)",
           borderRadius: 10,
           padding: "12px 16px",
           marginBottom: 22,
@@ -526,6 +535,7 @@ export default function Market() {
 
       {iexMarket?.available && (
         <div
+          className="market-legacy-macro-cards"
           style={{
             display: "grid",
             gridTemplateColumns:
@@ -784,7 +794,7 @@ export default function Market() {
           </div>
         </div>
 
-        {/* Energy Available */}
+        {/* Lowest Selling Producer */}
 
         <div
           style={{
@@ -807,7 +817,7 @@ export default function Market() {
                 "uppercase",
             }}
           >
-            Energy Available
+            Lowest Selling Producer
           </div>
 
           <div
@@ -820,7 +830,9 @@ export default function Market() {
               marginTop: 8,
             }}
           >
-            {totalEnergy.toFixed(3)}
+            {lowestListing
+              ? `₹${Number(lowestListing.price || 0).toFixed(2)}`
+              : "—"}
 
             <span
               style={{
@@ -831,12 +843,15 @@ export default function Market() {
                 marginLeft: 5,
               }}
             >
-              kWh
+              / kWh
             </span>
+          </div>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 6 }}>
+            {lowestListing ? `By: ${lowestListing.producer}` : "No active offer"}
           </div>
         </div>
 
-        {/* Lowest Price */}
+        {/* Highest Selling Producer */}
 
         <div
           style={{
@@ -859,7 +874,7 @@ export default function Market() {
                 "uppercase",
             }}
           >
-            Lowest Asking Price
+            Highest Selling Producer
           </div>
 
           <div
@@ -872,11 +887,11 @@ export default function Market() {
               marginTop: 8,
             }}
           >
-            {lowestPrice !== null
-              ? `₹${lowestPrice.toFixed(2)}`
+            {highestListing
+              ? `₹${Number(highestListing.price || 0).toFixed(2)}`
               : "—"}
 
-            {lowestPrice !== null && (
+            {highestListing && (
               <span
                 style={{
                   fontFamily:
@@ -889,6 +904,9 @@ export default function Market() {
                 / kWh
               </span>
             )}
+          </div>
+          <div style={{ color: colors.textMuted, fontSize: 12, marginTop: 6 }}>
+            {highestListing ? `By: ${highestListing.producer}` : "No active offer"}
           </div>
         </div>
       </div>

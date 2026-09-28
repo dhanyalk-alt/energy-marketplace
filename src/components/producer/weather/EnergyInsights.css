@@ -1,13 +1,29 @@
 .energy-section{
-    margin-top:40px;
+    margin-top:0;
+}
+
+.energy-insight-card {
+    background:#fff4cf;
+    border:1.5px solid #d5ad3d;
+    border-radius:22px;
+    padding:28px 30px;
+    box-shadow:4px 5px 0 rgba(32,32,30,.10);
+}
+
+.energy-insight-card p {
+    margin:0;
+    max-width:900px;
+    color:#494234;
+    font-size:18px;
+    line-height:1.6;
 }
 
 .energy-heading{
-    font-size:32px;
+    font-size:27px;
     font-weight:700;
-    text-align:center;
-    color:#000000;
-    margin-bottom:24px;
+    text-align:left;
+    color:#20201e;
+    margin:0 0 12px;
 }
 
 .energy-grid{
@@ -85,6 +101,9 @@
 
 @media(max-width:768px){
 
+    .energy-insight-card { padding:22px; }
+    .energy-insight-card p { font-size:16px; }
+
     .energy-grid{
         grid-template-columns:1fr;
     }
@@ -93,4 +112,27 @@
         grid-column:span 1;
     }
 
+}
+
+/* Keep the energy view compact and visually aligned with Today's Highlights. */
+.energy-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap:16px; }
+.energy-progress-card,
+.energy-card {
+  background:#f9f5e9;
+  border:1.5px solid #c7baa0;
+  border-radius:18px;
+  padding:20px;
+  min-height:170px;
+  box-shadow:3px 4px 0 rgba(32,32,30,.08);
+}
+.energy-card:hover { transform:none; }
+.energy-card h1 { margin:12px 0 6px; font-size:34px; color:#20201e; }
+.energy-card h2 { margin:12px 0 0; font-size:26px; color:#20201e; }
+.energy-card h3 { margin:0 0 10px; font-size:16px; color:#20201e; }
+.energy-card p { font-size:15px; color:#625d53; }
+.recommendation-card { grid-column:span 2; }
+
+@media(max-width:900px){
+  .energy-grid { grid-template-columns:1fr; }
+  .recommendation-card { grid-column:span 1; }
 }

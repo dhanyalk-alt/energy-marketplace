@@ -107,7 +107,12 @@ async def _consumer_reliability(db: AsyncSession, consumer: str) -> dict:
     }
 
 
-def _priority(request: BuyRequest, reliability: dict, available_energy: float) -> dict:
+def _priority(
+    request: BuyRequest,
+    reliability: dict,
+    available_energy: float,
+    highest_offer: float,
+) -> dict:
     urgency = request.urgency if request.urgency in URGENCY_WEIGHTS else "Normal"
     reason = (request.reason or "No reason provided").strip()
     energy = _number(request.energy)
@@ -116,11 +121,16 @@ def _priority(request: BuyRequest, reliability: dict, available_energy: float) -
     reason_text = reason.lower()
     critical_reason = any(word in reason_text for word in ["medical", "hospital", "emergency", "outage", "safety"])
 
-    score = URGENCY_WEIGHTS[urgency]
-    score += 12 if critical_reason else 0
-    score += min(20, reliability["score"] * 0.2)
-    score += min(12, offer * 0.4)
-    score -= 18 if availability_ratio > 0.8 else 8 if availability_ratio > 0.5 else 0
+    # Producers asked for the highest-paying request to be considered first.
+    # Price therefore carries the largest score share. The stated reason is
+    # the next deciding factor; urgency, reliability and feasibility remain
+    # supporting signals only.
+    price_score = (offer / highest_offer * 55) if highest_offer > 0 else 0
+    reason_score = 25 if critical_reason else 12 if reason != "No reason provided" else 0
+    urgency_score = URGENCY_WEIGHTS[urgency] * 0.25
+    reliability_score = min(10, reliability["score"] * 0.1)
+    score = price_score + reason_score + urgency_score + reliability_score
+    score -= 12 if availability_ratio > 0.8 else 5 if availability_ratio > 0.5 else 0
     score = round(max(0, min(100, score)), 1)
     priority_level = "High" if score >= 70 else "Medium" if score >= 45 else "Low"
 
@@ -133,11 +143,12 @@ def _priority(request: BuyRequest, reliability: dict, available_energy: float) -
         "reason": reason,
         "energy": energy,
         "offered_price": round(offer, 2),
+        "reason_priority": reason_score,
         "reliability": reliability,
         "explanation": (
-            f"{urgency} urgency, {energy:.2f} kWh requested at ₹{offer:.2f}/kWh, "
-            f"consumer reliability {reliability['score']:.0f}/100"
-            + (", and the stated reason includes a critical-need signal." if critical_reason else ".")
+            f"This request offers ₹{offer:.2f}/kWh, so price is considered first. "
+            + ("Its stated reason includes a critical-need signal. " if critical_reason else "Its stated reason is the next priority factor. ")
+            + f"{urgency} urgency and consumer reliability {reliability['score']:.0f}/100 are supporting factors."
         ),
     }
 
@@ -182,13 +193,30 @@ async def get_producer_insights(
     direction = "increase" if change > 0.15 else "decrease" if change < -0.15 else "stable"
     prediction_limited = recent_price is None or not weather_outlook["available"]
 
+    highest_offer = max(
+        (_number(item.offered_price, _number(item.total_price) / _number(item.energy) if _number(item.energy) else 0) for item in requests),
+        default=0.0,
+    )
+
     reliability_cache = {}
     priorities = []
     for request in requests:
         if request.consumer not in reliability_cache:
             reliability_cache[request.consumer] = await _consumer_reliability(db, request.consumer)
-        priorities.append(_priority(request, reliability_cache[request.consumer], available_energy))
-    priorities.sort(key=lambda item: item["score"], reverse=True)
+        priorities.append(
+            _priority(
+                request,
+                reliability_cache[request.consumer],
+                available_energy,
+                highest_offer,
+            )
+        )
+    # Keep ordering deterministic: highest offer first, then the reason-based
+    # score, then the overall score when offers are tied.
+    priorities.sort(
+        key=lambda item: (item["offered_price"], item["reason_priority"], item["score"]),
+        reverse=True,
+    )
     recommended_request = priorities[0] if priorities else None
 
     if available_energy <= capacity * 0.2:

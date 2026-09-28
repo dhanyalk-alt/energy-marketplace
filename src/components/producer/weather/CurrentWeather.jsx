@@ -13,7 +13,7 @@ function CurrentWeather({ weather, place }) {
       <div className="current-weather-content">
         {/* Location */}
         <div className="location-row">
-          <span className="location-dot"></span>
+          <span className="location-dot">📍</span>
 
           <h2>
             {place
@@ -41,11 +41,10 @@ function CurrentWeather({ weather, place }) {
               <p>Humidity: {weather.current.humidity}%</p>
               <p>Wind: {Math.round(weather.current.wind_kph)} km/h</p>
             </div>
+
           </div>
 
           <div className="weather-right">
-            <h1>Weather</h1>
-
             <p>
               {new Date(weather.location.localtime).toLocaleDateString(
                 "en-US",

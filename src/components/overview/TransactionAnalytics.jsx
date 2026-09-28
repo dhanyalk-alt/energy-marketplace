@@ -147,7 +147,7 @@ export function buildPeriodAnalytics(transactions, range, now = new Date()) {
   };
 }
 
-export function TimeRangeSelect({ value, onChange, accent, text, muted, border, surface }) {
+export function TimeRangeSelect({ value, onChange, accent, text, muted, border, surface, fontSize = 12 }) {
   return (
     <label
       title="Choose how completed transactions are grouped in this chart"
@@ -156,7 +156,7 @@ export function TimeRangeSelect({ value, onChange, accent, text, muted, border, 
         alignItems: "center",
         gap: 8,
         color: muted,
-        fontSize: 12,
+        fontSize,
         fontWeight: 600,
         whiteSpace: "nowrap",
       }}
@@ -173,8 +173,8 @@ export function TimeRangeSelect({ value, onChange, accent, text, muted, border, 
           border: `1px solid ${border}`,
           borderRadius: 8,
           padding: "8px 28px 8px 10px",
-          fontFamily: "Inter, sans-serif",
-          fontSize: 12,
+          fontFamily: "DM Sans, sans-serif",
+          fontSize,
           fontWeight: 600,
           cursor: "pointer",
           outlineColor: accent,

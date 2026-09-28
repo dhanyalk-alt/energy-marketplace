@@ -25,16 +25,20 @@ export default function ReviewProducers() {
 
   useEffect(() => {
     if (username) {
-      loadTransactions();
+      loadTransactions(false);
+
+      // 10s silent background polling
+      const pollTimer = window.setInterval(() => loadTransactions(true), 10000);
+      return () => window.clearInterval(pollTimer);
     } else {
       setLoading(false);
       setError("Unable to identify the logged-in consumer.");
     }
   }, [username]);
 
-  const loadTransactions = async () => {
+  const loadTransactions = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       setError("");
 
       const response = await axios.get(
@@ -599,12 +603,13 @@ const styles = {
     width: "100%",
     minHeight: "100%",
     boxSizing: "border-box",
-    padding: "10px 8px 90px",
+    padding: "30px 28px 60px",
+    borderRadius: "20px",
     fontFamily:
       "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-    color: "#EDF1F7",
+    color: "#0f172a",
     background:
-      "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
+      "linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 55%, #f8fafc 100%)",
   },
 
   // --------------------------------------------------------------
@@ -617,13 +622,14 @@ const styles = {
     alignItems: "flex-start",
     gap: "24px",
     marginBottom: "28px",
+    flexWrap: "wrap",
   },
 
   eyebrow: {
     fontSize: "12px",
     fontWeight: "700",
     letterSpacing: "0.14em",
-    color: "#B98CF2",
+    color: "#0284c7",
     marginBottom: "8px",
   },
 
@@ -631,15 +637,16 @@ const styles = {
     margin: 0,
     fontSize: "32px",
     lineHeight: 1.15,
-    fontWeight: "700",
-    color: "#EDF1F7",
+    fontWeight: "800",
+    color: "#0f172a",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   subtitle: {
     margin: "8px 0 0",
     fontSize: "14px",
     lineHeight: 1.6,
-    color: "#7C8BA3",
+    color: "#475569",
     maxWidth: "650px",
   },
 
@@ -647,22 +654,24 @@ const styles = {
     minWidth: "170px",
     padding: "16px 20px",
     borderRadius: "14px",
-    background: "#131F30",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(255, 255, 255, 0.9)",
+    border: "1px solid #bae6fd",
+    boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
     textAlign: "center",
   },
 
   summaryNumber: {
     fontSize: "28px",
-    fontWeight: "700",
-    color: "#5FD98A",
+    fontWeight: "800",
+    color: "#10b981",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   summaryLabel: {
     marginTop: "4px",
     fontSize: "11px",
     fontWeight: "600",
-    color: "#7C8BA3",
+    color: "#475569",
     textTransform: "uppercase",
     letterSpacing: "0.08em",
   },
@@ -678,9 +687,9 @@ const styles = {
     padding: "13px 16px",
     marginBottom: "20px",
     borderRadius: "10px",
-    background: "rgba(220,38,38,0.10)",
-    border: "1px solid rgba(248,113,113,0.25)",
-    color: "#FCA5A5",
+    background: "rgba(220,38,38,0.08)",
+    border: "1px solid rgba(248,113,113,0.3)",
+    color: "#dc2626",
     fontSize: "13px",
   },
 
@@ -688,7 +697,7 @@ const styles = {
     width: "20px",
     height: "20px",
     borderRadius: "50%",
-    background: "#DC2626",
+    background: "#dc2626",
     color: "#fff",
     display: "flex",
     alignItems: "center",
@@ -704,8 +713,9 @@ const styles = {
   emptyCard: {
     minHeight: "320px",
     borderRadius: "16px",
-    background: "#131F30",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(255, 255, 255, 0.9)",
+    border: "1px solid #bae6fd",
+    boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -718,25 +728,27 @@ const styles = {
     width: "64px",
     height: "64px",
     borderRadius: "18px",
-    background: "rgba(185,140,242,0.12)",
+    background: "rgba(2, 132, 199, 0.08)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "30px",
-    color: "#B98CF2",
+    color: "#0284c7",
     marginBottom: "18px",
   },
 
   emptyTitle: {
     margin: 0,
-    color: "#EDF1F7",
+    color: "#0f172a",
     fontSize: "20px",
+    fontWeight: "700",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   emptyText: {
     maxWidth: "480px",
     margin: "8px 0 0",
-    color: "#7C8BA3",
+    color: "#475569",
     fontSize: "14px",
     lineHeight: 1.6,
   },
@@ -748,18 +760,19 @@ const styles = {
   transactionGrid: {
     display: "grid",
     gridTemplateColumns:
-      "repeat(auto-fit, minmax(390px, 1fr))",
+      "repeat(auto-fit, minmax(360px, 1fr))",
     gap: "20px",
     width: "100%",
   },
 
   transactionCard: {
-    background: "#131F30",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(255, 255, 255, 0.92)",
+    border: "1px solid #bae6fd",
     borderRadius: "16px",
     padding: "22px",
     boxSizing: "border-box",
-    transition: "transform 0.2s ease",
+    boxShadow: "0 10px 25px -5px rgba(2, 132, 199, 0.08)",
+    transition: "transform 0.2s ease, box-shadow 0.2s ease",
   },
 
   cardTop: {
@@ -767,30 +780,32 @@ const styles = {
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: "12px",
-    paddingBottom: "18px",
-    borderBottom: "1px solid rgba(255,255,255,0.06)",
+    paddingBottom: "16px",
+    borderBottom: "1px solid #e0f2fe",
   },
 
   producerLabel: {
     fontSize: "10px",
     fontWeight: "700",
     letterSpacing: "0.12em",
-    color: "#7C8BA3",
-    marginBottom: "5px",
+    color: "#64748b",
+    marginBottom: "4px",
   },
 
   producerName: {
     fontSize: "20px",
     fontWeight: "700",
-    color: "#EDF1F7",
+    color: "#0f172a",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   completedBadge: {
-    padding: "6px 9px",
-    borderRadius: "7px",
-    background: "rgba(95,217,138,0.10)",
-    color: "#5FD98A",
-    fontSize: "10px",
+    padding: "6px 10px",
+    borderRadius: "20px",
+    background: "rgba(16, 185, 129, 0.1)",
+    border: "1px solid rgba(16, 185, 129, 0.25)",
+    color: "#10b981",
+    fontSize: "11px",
     fontWeight: "700",
     whiteSpace: "nowrap",
   },
@@ -803,67 +818,70 @@ const styles = {
     display: "grid",
     gridTemplateColumns: "1fr 1fr",
     gap: "10px",
-    marginTop: "18px",
+    marginTop: "16px",
   },
 
   detailBox: {
     padding: "12px",
-    borderRadius: "9px",
-    background: "rgba(255,255,255,0.025)",
-    border: "1px solid rgba(255,255,255,0.045)",
+    borderRadius: "10px",
+    background: "#f8fafc",
+    border: "1px solid #e0f2fe",
   },
 
   detailLabel: {
-    fontSize: "9px",
+    fontSize: "10px",
     fontWeight: "700",
-    letterSpacing: "0.1em",
-    color: "#7C8BA3",
-    marginBottom: "5px",
+    letterSpacing: "0.08em",
+    color: "#64748b",
+    marginBottom: "4px",
+    textTransform: "uppercase",
   },
 
   detailValue: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#EDF1F7",
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "#0f172a",
   },
 
   transactionId: {
-    marginTop: "16px",
-    fontSize: "11px",
-    color: "#526176",
+    marginTop: "14px",
+    fontSize: "12px",
+    color: "#64748b",
+    fontWeight: "500",
   },
 
   cardBottom: {
-    marginTop: "18px",
-    paddingTop: "16px",
-    borderTop: "1px solid rgba(255,255,255,0.06)",
+    marginTop: "16px",
+    paddingTop: "14px",
+    borderTop: "1px solid #e0f2fe",
   },
 
   reviewButton: {
     width: "100%",
     height: "44px",
     border: "none",
-    borderRadius: "9px",
+    borderRadius: "10px",
     background:
-      "linear-gradient(135deg, #5FD98A, #2FAE63)",
-    color: "#08210F",
+      "linear-gradient(135deg, #10b981, #059669)",
+    color: "#ffffff",
     cursor: "pointer",
-    fontSize: "13px",
+    fontSize: "14px",
     fontWeight: "700",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     gap: "8px",
-    boxShadow: "0 6px 16px rgba(95,217,138,0.15)",
+    boxShadow: "0 6px 16px rgba(16, 185, 129, 0.2)",
+    transition: "transform 0.15s ease",
   },
 
   reviewedBadge: {
     width: "100%",
     height: "44px",
-    borderRadius: "9px",
-    background: "rgba(95,217,138,0.08)",
-    border: "1px solid rgba(95,217,138,0.18)",
-    color: "#5FD98A",
+    borderRadius: "10px",
+    background: "rgba(16, 185, 129, 0.08)",
+    border: "1px solid rgba(16, 185, 129, 0.25)",
+    color: "#10b981",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -877,12 +895,13 @@ const styles = {
     width: "20px",
     height: "20px",
     borderRadius: "50%",
-    background: "#5FD98A",
-    color: "#08210F",
+    background: "#10b981",
+    color: "#ffffff",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
     fontSize: "12px",
+    fontWeight: "700",
   },
 
   // --------------------------------------------------------------
@@ -892,9 +911,9 @@ const styles = {
   modalOverlay: {
     position: "fixed",
     inset: 0,
-    zIndex: 2000,
-    background: "rgba(3,8,15,0.72)",
-    backdropFilter: "blur(7px)",
+    zIndex: 100000,
+    background: "rgba(15, 23, 42, 0.45)",
+    backdropFilter: "blur(6px)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -904,56 +923,63 @@ const styles = {
 
   modal: {
     width: "100%",
-    maxWidth: "560px",
+    maxWidth: "540px",
     maxHeight: "90vh",
     overflowY: "auto",
-    background: "#131F30",
-    border: "1px solid rgba(255,255,255,0.10)",
+    background: "#ffffff",
+    border: "1px solid #bae6fd",
     borderRadius: "18px",
     padding: "26px",
     boxSizing: "border-box",
-    boxShadow: "0 30px 80px rgba(0,0,0,0.45)",
+    boxShadow: "0 25px 70px rgba(15, 23, 42, 0.18)",
+    color: "#0f172a",
   },
 
   modalHeader: {
     display: "flex",
     justifyContent: "space-between",
+    alignItems: "flex-start",
     gap: "20px",
-    paddingBottom: "20px",
-    borderBottom: "1px solid rgba(255,255,255,0.07)",
+    paddingBottom: "16px",
+    borderBottom: "1px solid #e0f2fe",
   },
 
   modalEyebrow: {
-    fontSize: "10px",
+    fontSize: "11px",
     fontWeight: "700",
     letterSpacing: "0.12em",
-    color: "#B98CF2",
-    marginBottom: "7px",
+    color: "#0284c7",
+    marginBottom: "5px",
+    textTransform: "uppercase",
   },
 
   modalTitle: {
     margin: 0,
     fontSize: "22px",
-    color: "#EDF1F7",
+    fontWeight: "700",
+    color: "#0f172a",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   modalSubtitle: {
-    margin: "5px 0 0",
-    fontSize: "12px",
-    color: "#7C8BA3",
+    margin: "4px 0 0",
+    fontSize: "13px",
+    color: "#475569",
   },
 
   closeButton: {
     width: "34px",
     height: "34px",
     flexShrink: 0,
-    borderRadius: "9px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#9FB0C9",
-    fontSize: "23px",
-    lineHeight: 1,
+    borderRadius: "50%",
+    border: "none",
+    background: "rgba(2, 132, 199, 0.08)",
+    color: "#64748b",
+    fontSize: "20px",
     cursor: "pointer",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
 
   // --------------------------------------------------------------
@@ -962,28 +988,28 @@ const styles = {
 
   ratingSection: {
     textAlign: "center",
-    padding: "26px 0",
+    padding: "22px 0 16px",
   },
 
   ratingTitle: {
-    fontSize: "14px",
-    fontWeight: "600",
-    color: "#EDF1F7",
-    marginBottom: "14px",
+    fontSize: "15px",
+    fontWeight: "700",
+    color: "#0f172a",
+    marginBottom: "12px",
   },
 
   stars: {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    gap: "4px",
+    gap: "6px",
   },
 
   starButton: {
     border: "none",
     background: "transparent",
     cursor: "pointer",
-    fontSize: "38px",
+    fontSize: "36px",
     lineHeight: 1,
     padding: "2px",
     transition: "transform 0.12s ease",
@@ -991,8 +1017,9 @@ const styles = {
 
   ratingText: {
     marginTop: "10px",
-    fontSize: "12px",
-    color: "#7C8BA3",
+    fontSize: "13px",
+    fontWeight: "600",
+    color: "#475569",
   },
 
   // --------------------------------------------------------------
@@ -1001,6 +1028,7 @@ const styles = {
 
   commentSection: {
     position: "relative",
+    marginTop: "10px",
   },
 
   commentLabel: {
@@ -1008,58 +1036,63 @@ const styles = {
     alignItems: "center",
     gap: "8px",
     fontSize: "13px",
-    fontWeight: "600",
-    color: "#EDF1F7",
+    fontWeight: "700",
+    color: "#334155",
     marginBottom: "8px",
+    textTransform: "uppercase",
+    letterSpacing: "0.05em",
   },
 
   optional: {
-    fontSize: "10px",
-    color: "#7C8BA3",
+    fontSize: "11px",
+    color: "#64748b",
     fontWeight: "500",
+    textTransform: "none",
   },
 
   textarea: {
     width: "100%",
-    minHeight: "130px",
+    minHeight: "110px",
     resize: "vertical",
     boxSizing: "border-box",
-    padding: "13px",
+    padding: "12px 14px",
     borderRadius: "10px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "#0B1420",
-    color: "#EDF1F7",
+    border: "1px solid #cbd5e1",
+    background: "#f8fafc",
+    color: "#0f172a",
     outline: "none",
     fontFamily: "inherit",
-    fontSize: "13px",
+    fontSize: "14px",
     lineHeight: 1.5,
   },
 
   characterCount: {
     textAlign: "right",
     marginTop: "5px",
-    fontSize: "10px",
-    color: "#526176",
+    fontSize: "11px",
+    color: "#64748b",
   },
 
   modalError: {
     marginTop: "14px",
-    padding: "11px 13px",
+    padding: "11px 14px",
     borderRadius: "8px",
-    background: "rgba(220,38,38,0.10)",
-    border: "1px solid rgba(248,113,113,0.20)",
-    color: "#FCA5A5",
-    fontSize: "12px",
+    background: "rgba(220,38,38,0.08)",
+    border: "1px solid rgba(248,113,113,0.25)",
+    color: "#dc2626",
+    fontSize: "13px",
+    fontWeight: "500",
   },
 
   modalSuccess: {
     marginTop: "14px",
-    padding: "11px 13px",
+    padding: "11px 14px",
     borderRadius: "8px",
-    background: "rgba(95,217,138,0.10)",
-    border: "1px solid rgba(95,217,138,0.20)",
-    color: "#5FD98A",
-    fontSize: "12px",
+    background: "rgba(16, 185, 129, 0.08)",
+    border: "1px solid rgba(16, 185, 129, 0.25)",
+    color: "#10b981",
+    fontSize: "13px",
+    fontWeight: "600",
   },
 
   // --------------------------------------------------------------
@@ -1077,11 +1110,11 @@ const styles = {
     height: "42px",
     padding: "0 18px",
     borderRadius: "9px",
-    border: "1px solid rgba(255,255,255,0.08)",
-    background: "rgba(255,255,255,0.04)",
-    color: "#9FB0C9",
+    border: "1px solid #e2e8f0",
+    background: "#f1f5f9",
+    color: "#475569",
     cursor: "pointer",
-    fontSize: "13px",
+    fontSize: "14px",
     fontWeight: "600",
   },
 
@@ -1091,10 +1124,12 @@ const styles = {
     borderRadius: "9px",
     border: "none",
     background:
-      "linear-gradient(135deg, #5FD98A, #2FAE63)",
-    color: "#08210F",
-    fontSize: "13px",
+      "linear-gradient(135deg, #10b981, #059669)",
+    color: "#ffffff",
+    fontSize: "14px",
     fontWeight: "700",
+    cursor: "pointer",
+    boxShadow: "0 4px 12px rgba(16, 185, 129, 0.2)",
   },
 
   // --------------------------------------------------------------
@@ -1108,26 +1143,28 @@ const styles = {
     alignItems: "center",
     justifyContent: "center",
     textAlign: "center",
-    background: "#131F30",
-    border: "1px solid rgba(255,255,255,0.07)",
+    background: "rgba(255, 255, 255, 0.9)",
+    border: "1px solid #bae6fd",
     borderRadius: "16px",
   },
 
   loadingIcon: {
     fontSize: "30px",
-    color: "#B98CF2",
+    color: "#0284c7",
     marginBottom: "14px",
   },
 
   loadingTitle: {
     margin: 0,
     fontSize: "19px",
-    color: "#EDF1F7",
+    fontWeight: "700",
+    color: "#0f172a",
+    fontFamily: "Space Grotesk, sans-serif",
   },
 
   loadingText: {
     margin: "8px 0 0",
-    fontSize: "13px",
-    color: "#7C8BA3",
+    fontSize: "14px",
+    color: "#475569",
   },
 };

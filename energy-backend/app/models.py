@@ -153,6 +153,24 @@ class BuyRequest(Base):
         nullable=True,
     )
 
+    # A negotiated request is still one buy request.  Keep its negotiation
+    # record linked so the producer UI never has to infer a second lifecycle
+    # row from matching consumer/listing values.
+    negotiation_id = Column(
+        Integer,
+        ForeignKey("negotiations.id"),
+        nullable=True,
+        index=True,
+    )
+
+    # Older rows may not have a timestamp, so this remains nullable after the
+    # additive database migration. New requests receive the creation time.
+    created_at = Column(
+        DateTime,
+        default=datetime.utcnow,
+        nullable=True,
+    )
+
 
 # =========================================================
 # TRANSACTION

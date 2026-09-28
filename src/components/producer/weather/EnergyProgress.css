@@ -51,3 +51,10 @@
     font-size:18px;
     color:#000000;
 }
+
+.energy-progress-card { background:#f9f5e9; border:1.5px solid #c7baa0; border-radius:18px; padding:20px; min-height:170px; box-shadow:3px 4px 0 rgba(32,32,30,.08); }
+.energy-progress-card:hover { transform:none; }
+.energy-progress-card h3 { margin:0 0 14px; font-size:16px; color:#20201e; }
+.progress-track { height:8px; margin-bottom:14px; }
+.energy-progress-card h2 { margin:8px 0 4px; font-size:34px; color:#20201e; }
+.energy-progress-card p { font-size:15px; color:#625d53; }

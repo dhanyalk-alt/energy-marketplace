@@ -83,6 +83,8 @@ class BuyRequestResponse(BaseModel):
     reason: str | None = None
     urgency: str = "Normal"
     offered_price: float | None = None
+    negotiation_id: int | None = None
+    created_at: datetime | None = None
 
     class Config:
         from_attributes = True

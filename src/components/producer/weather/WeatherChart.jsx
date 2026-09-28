@@ -132,8 +132,8 @@ function WeatherChart({
               right: 15,
             }}
             tick={{
-              fontSize: 13,
-              fill: "#5f6368",
+              fontSize: 15,
+              fill: "#625d53",
             }}
           />
 
@@ -164,8 +164,8 @@ function WeatherChart({
                   : `${value}${unit}`
               }
               style={{
-                fill: "#5f6368",
-                fontSize: 13,
+                fill: "#625d53",
+                fontSize: 15,
                 fontWeight: 600,
               }}
             />

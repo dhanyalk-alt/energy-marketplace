@@ -1,14 +1,14 @@
 /* Main Weather Page */
 
 .forecasting-container{
-    position: relative;   /* ADD THIS */
-    overflow: hidden;     /* ADD THIS */
-
     width:100%;
+    min-height:100vh;
     display:flex;
     flex-direction:column;
     gap:24px;
-    padding:24px;
+    padding:clamp(22px, 3vw, 48px);
+    background:linear-gradient(135deg, #e8dfca 0%, #f2ead9 54%, #e6e8f2 100%);
+    box-sizing:border-box;
 }
 .forecasting-container > *:not(.weather-effects){
     position: relative;
@@ -20,11 +20,27 @@
   width: 100%;
 }
 
+.weather-energy-summary {
+  width: 100%;
+  padding: 26px;
+  border: 1.5px solid #c7baa0;
+  border-radius: 24px;
+  background: rgba(249, 245, 233, .72);
+  box-shadow: 4px 5px 0 rgba(32, 32, 30, .08);
+}
+
+.weather-energy-summary-title {
+  margin: 0 0 22px;
+  color: #20201e;
+  font-size: 28px;
+  font-weight: 700;
+}
+
 /* Loading & Error */
 
 .forecasting-container h2 {
   text-align: center;
-  color: #03070b;
+  color: #20201e;
   margin-top: 80px;
   font-weight: 500;
 }

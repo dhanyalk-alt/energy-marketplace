@@ -53,3 +53,11 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* Compact shared layout for the combined highlights and insights section. */
+.weather-details-section { margin: 0 0 18px; }
+.weather-details-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+
+@media (max-width: 900px) {
+  .weather-details-grid { grid-template-columns: 1fr; }
+}

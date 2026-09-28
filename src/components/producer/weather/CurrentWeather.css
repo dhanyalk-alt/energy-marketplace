@@ -3,11 +3,12 @@
   overflow: hidden;
 
   width: 100%;
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 30px 36px;
+  background: #f9f5e9;
+  border: 1.5px solid #c7baa0;
+  border-radius: 26px;
+  padding: 32px 38px;
   box-sizing: border-box;
-  box-shadow: 0 2px 10px rgba(60, 64, 67, 0.12);
+  box-shadow: 4px 5px 0 rgba(32, 32, 30, 0.10);
   transition: all 0.3s ease;
 }
 
@@ -26,17 +27,15 @@
 }
 
 .location-dot {
-  width: 12px;
-  height: 12px;
-  background: #4285f4;
-  border-radius: 50%;
+  font-size: 20px;
+  line-height: 1;
 }
 
 .location-row h2 {
   margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-  color: #202124;
+  font-size: 20px;
+  font-weight: 700;
+  color: #20201e;
 }
 
 /* Main Layout */
@@ -69,47 +68,52 @@
 
 .temp-section h1 {
   margin: 0;
-  font-size: 84px;
-  font-weight: 400;
+  font-size: clamp(54px, 7vw, 72px);
+  font-weight: 700;
   line-height: 1;
-  color: #202124;
+  color: #20201e;
 }
 
 .degree {
-  font-size: 36px;
+  font-size: 30px;
   margin-top: 8px;
-  color: #070707;
+  color: #20201e;
 }
 
 .weather-stats {
   margin-left: 16px;
+  padding-left: 18px;
+  border-left: 1.5px solid rgba(32, 32, 30, 0.18);
 }
 
 .weather-stats p {
   margin: 6px 0;
-  font-size: 18px;
-  color: #030303;
+  color: #3f3a31;
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .weather-right {
   text-align: right;
 }
 
-.weather-right h1 {
-  margin: 0;
-  font-size: 40px;
-  font-weight: 500;
-  color: #090909;
-}
-
 .weather-right p {
   margin: 8px 0;
-  font-size: 18px;
-  color: #020405;
+  font-size: 17px;
+  color: #625d53;
 }
 
 .condition {
-  font-size: 22px;
-  font-weight: 500;
-  color: #0f0f0f;
+  font-size: 22px !important;
+  font-weight: 700;
+  color: #20201e !important;
+}
+
+@media (max-width: 680px) {
+  .current-weather { padding: 24px; }
+  .weather-top { align-items: flex-start; gap: 18px; flex-direction: column; }
+  .weather-right { text-align: left; }
+  .weather-icon { width: 72px; height: 72px; }
+  .weather-left { flex-wrap: wrap; }
+  .weather-stats { width: 100%; margin-left: 0; padding-left: 0; border-left: 0; }
 }

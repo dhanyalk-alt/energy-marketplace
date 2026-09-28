@@ -15,64 +15,94 @@ import {
 } from "recharts";
 
 // ------------------------------------------------------------
-// DESIGN TOKENS
+// DESIGN TOKENS (LIGHT COOL SKY BLUE THEME)
 // ------------------------------------------------------------
 
 const colors = {
-  bg: "#0B1420",
-  surface: "#131F30",
-  surfaceAlt: "#182742",
-  border: "rgba(255,255,255,0.07)",
-  text: "#EDF1F7",
-  textMuted: "#7C8BA3",
-  amber: "#F2A93B",
-  cyan: "#3FD0E0",
-  green: "#5FD98A",
-  violet: "#B98CF2",
-  red: "#F87171",
+  bg: "#f0f7ff",
+  bgGradient: "linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 55%, #f8fafc 100%)",
+  surface: "rgba(255, 255, 255, 0.88)",
+  surfaceAlt: "#ffffff",
+  border: "#bae6fd",
+  borderSubtle: "rgba(2, 132, 199, 0.16)",
+  text: "#0f172a",          // Dark slate blue (Primary Text)
+  textNavy: "#1e3a8a",      // Cool navy
+  textMuted: "#475569",     // Subtitles & Secondary Text
+  textDim: "#64748b",       // Subtle indicators
+  sky: "#0284c7",           // Primary Sky Blue Accent
+  cyan: "#06b6d4",          // Cyan Accent
+  amber: "#d97706",         // Energy Amber
+  violet: "#7c3aed",        // Money Violet
+  green: "#10b981",         // Green Accent
+  red: "#ef4444",           // Error Red
 };
 
 const fontImport = `
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700;800&family=Inter:wght@400;500;600;700;800&display=swap');
 
-@keyframes pulse {
+@keyframes pulseCyan {
   0% {
-    box-shadow: 0 0 0 0 rgba(63,208,224,0.55);
+    box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.6);
   }
-
   70% {
-    box-shadow: 0 0 0 8px rgba(63,208,224,0);
+    box-shadow: 0 0 0 10px rgba(2, 132, 199, 0);
   }
-
   100% {
-    box-shadow: 0 0 0 0 rgba(63,208,224,0);
+    box-shadow: 0 0 0 0 rgba(2, 132, 199, 0);
   }
+}
+
+.ov-container {
+  min-height: 100%;
+  background: linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 55%, #f8fafc 100%);
+  padding: 32px 30px 48px;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  border-radius: 20px;
+  box-sizing: border-box;
 }
 
 .ov-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
+  gap: 20px;
 }
 
 .ov-split {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: 18px;
-  margin-top: 20px;
+  gap: 22px;
+  margin-top: 24px;
+  align-items: stretch;
 }
 
-@media (max-width: 1100px) {
+.ov-card {
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid #bae6fd;
+  border-radius: 18px;
+  box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.08), 0 4px 6px -4px rgba(2, 132, 199, 0.04);
+  transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ov-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 32px -4px rgba(2, 132, 199, 0.14), 0 6px 12px -4px rgba(2, 132, 199, 0.06);
+}
+
+@media (max-width: 1200px) {
   .ov-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-
   .ov-split {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 640px) {
+  .ov-container {
+    padding: 20px 16px;
+  }
   .ov-grid {
     grid-template-columns: 1fr;
   }
@@ -92,28 +122,27 @@ function StatCard({
 }) {
   return (
     <div
+      className="ov-card"
       style={{
-        background: colors.surface,
-        border: `1px solid ${colors.border}`,
-        borderLeft: `3px solid ${accent}`,
-        borderRadius: 10,
-        padding: "18px 20px",
+        borderLeft: `4px solid ${accent}`,
+        padding: "22px 24px",
       }}
     >
       <div
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 8,
+          gap: 10,
           color: colors.textMuted,
           fontFamily: "Inter, sans-serif",
-          fontSize: 12,
+          fontSize: 13,
+          fontWeight: 600,
           letterSpacing: "0.06em",
           textTransform: "uppercase",
-          marginBottom: 10,
+          marginBottom: 12,
         }}
       >
-        <span style={{ fontSize: 15 }}>
+        <span style={{ fontSize: 18 }}>
           {icon}
         </span>
 
@@ -124,9 +153,9 @@ function StatCard({
         style={{
           fontFamily: "Space Grotesk, sans-serif",
           fontWeight: 700,
-          fontSize: 30,
+          fontSize: 32,
           color: colors.text,
-          lineHeight: 1,
+          lineHeight: 1.1,
         }}
       >
         {value}
@@ -134,10 +163,10 @@ function StatCard({
         <span
           style={{
             fontFamily: "Inter, sans-serif",
-            fontWeight: 500,
-            fontSize: 14,
-            color: colors.textMuted,
-            marginLeft: 6,
+            fontWeight: 600,
+            fontSize: 15,
+            color: colors.textDim,
+            marginLeft: 8,
           }}
         >
           {unit}
@@ -166,7 +195,7 @@ export default function Overview() {
   // ----------------------------------------------------------
 
   useEffect(() => {
-    const fetchOverviewData = async () => {
+    const fetchOverviewData = async (silent = false) => {
       if (!username) {
         setError("Consumer username not found.");
         setLoading(false);
@@ -174,6 +203,7 @@ export default function Overview() {
       }
 
       try {
+        if (!silent) setLoading(true);
         const transactionResponse = await fetch(
           `${API_BASE_URL}/trading/transactions/consumer/${encodeURIComponent(
             username
@@ -223,11 +253,15 @@ export default function Overview() {
           "Unable to load overview data."
         );
       } finally {
-        setLoading(false);
+        if (!silent) setLoading(false);
       }
     };
 
-    fetchOverviewData();
+    fetchOverviewData(false);
+
+    // 10s silent background polling
+    const pollTimer = window.setInterval(() => fetchOverviewData(true), 10000);
+    return () => window.clearInterval(pollTimer);
   }, [username]);
 
   // ----------------------------------------------------------
@@ -307,27 +341,20 @@ export default function Overview() {
   );
 
   // ----------------------------------------------------------
-  // LOADING
+  // LOADING STATE
   // ----------------------------------------------------------
 
   if (loading) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background:
-            "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
-          padding: "32px 28px",
-          fontFamily: "Inter, sans-serif",
-          color: colors.text,
-        }}
-      >
+      <div className="ov-container">
         <style>{fontImport}</style>
 
         <h1
           style={{
-            fontFamily:
-              "Space Grotesk, sans-serif",
+            fontFamily: "Space Grotesk, sans-serif",
+            fontSize: "2rem",
+            fontWeight: 700,
+            color: colors.text,
           }}
         >
           Loading Overview...
@@ -336,6 +363,7 @@ export default function Overview() {
         <p
           style={{
             color: colors.textMuted,
+            fontSize: "15px",
           }}
         >
           Fetching your marketplace activity.
@@ -345,27 +373,20 @@ export default function Overview() {
   }
 
   // ----------------------------------------------------------
-  // ERROR
+  // ERROR STATE
   // ----------------------------------------------------------
 
   if (error) {
     return (
-      <div
-        style={{
-          minHeight: "100vh",
-          background:
-            "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
-          padding: "32px 28px",
-          fontFamily: "Inter, sans-serif",
-          color: colors.text,
-        }}
-      >
+      <div className="ov-container">
         <style>{fontImport}</style>
 
         <h1
           style={{
-            fontFamily:
-              "Space Grotesk, sans-serif",
+            fontFamily: "Space Grotesk, sans-serif",
+            fontSize: "2rem",
+            fontWeight: 700,
+            color: colors.text,
           }}
         >
           Consumer Overview
@@ -375,12 +396,12 @@ export default function Overview() {
           style={{
             marginTop: 20,
             padding: 18,
-            borderRadius: 10,
-            background:
-              "rgba(248,113,113,0.08)",
-            border:
-              "1px solid rgba(248,113,113,0.25)",
+            borderRadius: 12,
+            background: "rgba(239, 68, 68, 0.08)",
+            border: "1px solid rgba(239, 68, 68, 0.25)",
             color: colors.red,
+            fontSize: "15px",
+            fontWeight: 500,
           }}
         >
           {error}
@@ -394,47 +415,36 @@ export default function Overview() {
   // ----------------------------------------------------------
 
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at 15% 0%, #16233A 0%, #0B1420 55%)",
-        padding: "32px 28px 60px",
-        fontFamily: "Inter, sans-serif",
-      }}
-    >
+    <div className="ov-container">
       <style>{fontImport}</style>
 
       {/* ======================================================
-          HEADER
+          HEADER SECTION
       ====================================================== */}
 
-      <div
-        style={{
-          marginBottom: 28,
-        }}
-      >
+      <div style={{ marginBottom: 30 }}>
         <div
           style={{
-            color: colors.cyan,
-            fontSize: 12,
-            fontWeight: 600,
+            color: colors.sky,
+            fontSize: 13,
+            fontWeight: 700,
             letterSpacing: "0.14em",
             textTransform: "uppercase",
-            marginBottom: 6,
+            marginBottom: 8,
           }}
         >
-          Consumer · Live Grid
+          Consumer · Live Microgrid
         </div>
 
         <h1
           style={{
-            fontFamily:
-              "Space Grotesk, sans-serif",
-            fontSize: 30,
-            fontWeight: 700,
+            fontFamily: "Space Grotesk, sans-serif",
+            fontSize: "2.25rem", // text-4xl
+            fontWeight: 800,
             color: colors.text,
+            letterSpacing: "-0.02em",
             margin: 0,
+            lineHeight: 1.15,
           }}
         >
           Overview
@@ -443,19 +453,21 @@ export default function Overview() {
         <p
           style={{
             color: colors.textMuted,
-            marginTop: 6,
-            fontSize: 14,
+            marginTop: 8,
+            fontSize: 16, // text-base
+            lineHeight: 1.5,
           }}
         >
           Welcome back,{" "}
           <strong
             style={{
-              color: colors.text,
+              color: colors.textNavy,
+              fontWeight: 700,
             }}
           >
             {username || "Consumer"}
           </strong>
-          . Here's your marketplace activity.
+          . Here's your real-time clean power and marketplace activity.
         </p>
       </div>
 
@@ -464,7 +476,6 @@ export default function Overview() {
       ====================================================== */}
 
       <div className="ov-grid">
-
         <StatCard
           label="Energy Purchased"
           value={energyPurchased.toFixed(2)}
@@ -493,164 +504,173 @@ export default function Overview() {
           label="Market Energy"
           value={availableEnergy.toFixed(2)}
           unit="kWh available"
-          accent={colors.cyan}
+          accent={colors.sky}
           icon="🔋"
         />
-
       </div>
 
       {/* ======================================================
-          CHART + MARKET STATUS
+          EXPANDED ANALYTICS & MARKET STATUS (CLEAN VIEWPORT FILL)
       ====================================================== */}
 
       <div className="ov-split">
-
         {/* SPENDING CHART */}
-
         <div
+          className="ov-card"
           style={{
-            background: colors.surface,
-            border:
-              `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: "22px 24px",
+            padding: "26px 28px",
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "space-between",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 10,
-              flexWrap: "wrap",
-              marginBottom: 18,
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <span
-                style={{
-                  width: 9,
-                  height: 9,
-                  borderRadius: "50%",
-                  background: colors.cyan,
-                  animation: "pulse 1.8s infinite",
-                }}
-              />
-
-              <div>
-                <h2
+          <div>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+                flexWrap: "wrap",
+                marginBottom: 20,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
                   style={{
-                    fontFamily: "Space Grotesk, sans-serif",
-                    fontSize: 17,
-                    fontWeight: 600,
-                    color: colors.text,
-                    margin: 0,
+                    width: 10,
+                    height: 10,
+                    borderRadius: "50%",
+                    background: colors.cyan,
+                    animation: "pulseCyan 1.8s infinite",
                   }}
-                >
-                  Spending Analytics
-                </h2>
-                <p style={{ color: colors.textMuted, fontSize: 12, margin: "4px 0 0" }}>
-                  Completed purchases in the current {analyticsRange.toLowerCase()}.
-                </p>
+                />
+
+                <div>
+                  <h2
+                    style={{
+                      fontFamily: "Space Grotesk, sans-serif",
+                      fontSize: 24, // text-2xl
+                      fontWeight: 700,
+                      color: colors.text,
+                      margin: 0,
+                    }}
+                  >
+                    Spending Analytics
+                  </h2>
+                  <p style={{ color: colors.textMuted, fontSize: 15, margin: "4px 0 0" }}>
+                    Completed purchases in the current {analyticsRange.toLowerCase()}.
+                  </p>
+                </div>
               </div>
+
+              <TimeRangeSelect
+                value={analyticsRange}
+                onChange={setAnalyticsRange}
+                accent={colors.cyan}
+                text={colors.text}
+                muted={colors.textMuted}
+                border={colors.border}
+                surface={colors.surfaceAlt}
+                fontSize={13}
+              />
             </div>
 
-            <TimeRangeSelect
-              value={analyticsRange}
-              onChange={setAnalyticsRange}
-              accent={colors.cyan}
-              text={colors.text}
-              muted={colors.textMuted}
-              border={colors.border}
-              surface={colors.surfaceAlt}
-            />
-          </div>
-
-          <div style={{ display: "flex", gap: 22, flexWrap: "wrap", marginBottom: 18 }}>
-            <div>
-              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                Money Spent
+            <div style={{ display: "flex", gap: 28, flexWrap: "wrap", marginBottom: 22 }}>
+              <div>
+                <div style={{ color: colors.textDim, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Money Spent
+                </div>
+                <strong style={{ color: colors.violet, fontFamily: "Space Grotesk, sans-serif", fontSize: 30, fontWeight: 800 }}>
+                  ₹{spendingAnalytics.summary.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </strong>
               </div>
-              <strong style={{ color: colors.violet, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
-                ₹{spendingAnalytics.summary.amount.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </strong>
-            </div>
-            <div>
-              <div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.06em" }}>
-                Energy Purchased
+              <div>
+                <div style={{ color: colors.textDim, fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.06em" }}>
+                  Energy Purchased
+                </div>
+                <strong style={{ color: colors.cyan, fontFamily: "Space Grotesk, sans-serif", fontSize: 30, fontWeight: 800 }}>
+                  {spendingAnalytics.summary.energy.toFixed(2)} kWh
+                </strong>
               </div>
-              <strong style={{ color: colors.cyan, fontFamily: "Space Grotesk, sans-serif", fontSize: 20 }}>
-                {spendingAnalytics.summary.energy.toFixed(2)} kWh
-              </strong>
             </div>
           </div>
 
           {chartData.length > 0 ? (
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={chartData}>
+            <ResponsiveContainer width="100%" height={280}>
+              <LineChart data={chartData}>
+                <CartesianGrid
+                  stroke="rgba(2, 132, 199, 0.08)"
+                  vertical={false}
+                />
 
-              <CartesianGrid
-                stroke="rgba(255,255,255,0.06)"
-                vertical={false}
-              />
+                <XAxis
+                  dataKey="label"
+                  stroke={colors.textMuted}
+                  tick={{
+                    fill: colors.textMuted,
+                    fontSize: 13,
+                    fontWeight: 500,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
 
-              <XAxis
-                dataKey="label"
-                stroke={colors.textMuted}
-                tick={{
-                  fill: colors.textMuted,
-                  fontSize: 11,
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
+                <YAxis
+                  stroke={colors.textMuted}
+                  tick={{
+                    fill: colors.textMuted,
+                    fontSize: 14,
+                    fontWeight: 500,
+                  }}
+                  axisLine={false}
+                  tickLine={false}
+                />
 
-              <YAxis
-                stroke={colors.textMuted}
-                tick={{
-                  fill: colors.textMuted,
-                  fontSize: 12,
-                }}
-                axisLine={false}
-                tickLine={false}
-              />
+                <Tooltip
+                  contentStyle={{
+                    background:
+                      colors.surfaceAlt,
+                    border:
+                      `1px solid ${colors.border}`,
+                    borderRadius: 10,
+                    color: colors.text,
+                    fontSize: 15,
+                    fontWeight: 500,
+                    boxShadow: "0 8px 24px rgba(2, 132, 199, 0.12)",
+                  }}
+                  labelStyle={{
+                    color: colors.textMuted,
+                    fontSize: 13,
+                    fontWeight: 600,
+                  }}
+                  formatter={(value) => [
+                    `₹${Number(value).toFixed(2)}`,
+                    "Spending",
+                  ]}
+                />
 
-              <Tooltip
-                contentStyle={{
-                  background:
-                    colors.surfaceAlt,
-                  border:
-                    `1px solid ${colors.border}`,
-                  borderRadius: 8,
-                  color: colors.text,
-                }}
-                labelStyle={{
-                  color: colors.textMuted,
-                }}
-                formatter={(value) => [
-                  `₹${Number(value).toFixed(2)}`,
-                  "Spending",
-                ]}
-              />
-
-              <Line
-                type="monotone"
-                dataKey="amount"
-                name="Spending"
-                stroke={colors.cyan}
-                strokeWidth={3}
-                dot={{
-                  r: 4,
-                  fill: colors.cyan,
-                  strokeWidth: 0,
-                }}
-                activeDot={{
-                  r: 6,
-                }}
-              />
-
-            </LineChart>
-          </ResponsiveContainer>
+                <Line
+                  type="monotone"
+                  dataKey="amount"
+                  name="Spending"
+                  stroke={colors.sky}
+                  strokeWidth={3.5}
+                  dot={{
+                    r: 5,
+                    fill: colors.sky,
+                    strokeWidth: 2,
+                    stroke: "#ffffff",
+                  }}
+                  activeDot={{
+                    r: 7,
+                    fill: colors.sky,
+                    stroke: "#ffffff",
+                    strokeWidth: 2,
+                  }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
           ) : (
             <div
               style={{
@@ -682,271 +702,107 @@ export default function Overview() {
         </div>
 
         {/* MARKET STATUS */}
-
         <div
+          className="ov-card"
           style={{
-            background: colors.surface,
-            border:
-              `1px solid ${colors.border}`,
-            borderRadius: 12,
-            padding: "22px 24px",
+            padding: "28px 24px",
             display: "flex",
             flexDirection: "column",
-            justifyContent: "center",
+            justifyContent: "space-between",
             alignItems: "center",
             textAlign: "center",
           }}
         >
-          <h2
-            style={{
-              fontFamily:
-                "Space Grotesk, sans-serif",
-              fontSize: 17,
-              fontWeight: 600,
-              color: colors.text,
-              margin: 0,
-            }}
-          >
-            Marketplace
-          </h2>
-
-          {/* STATUS SEGMENTS */}
-
-          <div
-            style={{
-              display: "flex",
-              gap: 4,
-              marginTop: 26,
-            }}
-          >
-            {Array.from({
-              length: totalSegments,
-            }).map((_, index) => (
-              <div
-                key={index}
-                style={{
-                  width: 10,
-                  height: 28,
-                  borderRadius: 2,
-                  background:
-                    index < litSegments
-                      ? colors.cyan
-                      : "rgba(255,255,255,0.08)",
-                  boxShadow:
-                    index < litSegments
-                      ? `0 0 8px ${colors.cyan}66`
-                      : "none",
-                }}
-              />
-            ))}
-          </div>
-
-          <div
-            style={{
-              fontFamily:
-                "Space Grotesk, sans-serif",
-              fontWeight: 700,
-              fontSize: 26,
-              color: colors.cyan,
-              marginTop: 22,
-            }}
-          >
-            {marketStatus.toUpperCase()}
-          </div>
-
-          <p
-            style={{
-              color: colors.textMuted,
-              marginTop: 4,
-              fontSize: 13,
-            }}
-          >
-            {marketListingsCount} active listing
-            {marketListingsCount !== 1
-              ? "s"
-              : ""}
-          </p>
-
-          <div
-            style={{
-              marginTop: 14,
-              color: colors.textMuted,
-              fontSize: 12,
-            }}
-          >
-            {availableEnergy.toFixed(2)} kWh
-            currently available
-          </div>
-        </div>
-
-      </div>
-
-      {/* ======================================================
-          RECENT PURCHASES
-      ====================================================== */}
-
-      <div
-        style={{
-          marginTop: 20,
-          background: colors.surface,
-          border:
-            `1px solid ${colors.border}`,
-          borderRadius: 12,
-          padding: "22px 24px",
-        }}
-      >
-        <h2
-          style={{
-            fontFamily:
-              "Space Grotesk, sans-serif",
-            fontSize: 17,
-            fontWeight: 600,
-            color: colors.text,
-            marginTop: 0,
-            marginBottom: 18,
-          }}
-        >
-          Recent Purchases
-        </h2>
-
-        {completedTransactions.length === 0 ? (
-          <div
-            style={{
-              padding: 24,
-              textAlign: "center",
-              color: colors.textMuted,
-              background:
-                "rgba(255,255,255,0.02)",
-              borderRadius: 8,
-            }}
-          >
-            No completed purchases yet.
-          </div>
-        ) : (
-          <div
-            style={{
-              overflowX: "auto",
-            }}
-          >
-            <table
+          <div>
+            <h2
               style={{
-                width: "100%",
-                borderCollapse: "collapse",
+                fontFamily: "Space Grotesk, sans-serif",
+                fontSize: 24, // text-2xl
+                fontWeight: 700,
+                color: colors.text,
+                margin: 0,
               }}
             >
-              <thead>
-                <tr>
-
-                  <th style={headerStyle}>
-                    Producer
-                  </th>
-
-                  <th style={headerStyle}>
-                    Energy
-                  </th>
-
-                  <th style={headerStyle}>
-                    Price / kWh
-                  </th>
-
-                  <th style={headerStyle}>
-                    Total
-                  </th>
-
-                  <th style={headerStyle}>
-                    Date
-                  </th>
-
-                  <th style={headerStyle}>
-                    Status
-                  </th>
-
-                </tr>
-              </thead>
-
-              <tbody>
-
-                {completedTransactions
-                  .slice(0, 5)
-                  .map((transaction) => (
-                    <tr key={transaction.id}>
-
-                      <td style={cellStyle}>
-                        {transaction.producer}
-                      </td>
-
-                      <td style={cellStyle}>
-                        {Number(
-                          transaction.energy
-                        ).toFixed(2)}{" "}
-                        kWh
-                      </td>
-
-                      <td style={cellStyle}>
-                        ₹
-                        {Number(
-                          transaction.price
-                        ).toFixed(2)}
-                      </td>
-
-                      <td style={cellStyle}>
-                        ₹
-                        {Number(
-                          transaction.total_amount
-                        ).toFixed(2)}
-                      </td>
-
-                      <td style={cellStyle}>
-                        {transaction.created_at
-                          ? new Date(
-                              transaction.created_at
-                            ).toLocaleString()
-                          : "-"}
-                      </td>
-
-                      <td
-                        style={{
-                          ...cellStyle,
-                          color: colors.green,
-                          fontWeight: 600,
-                        }}
-                      >
-                        {transaction.status}
-                      </td>
-
-                    </tr>
-                  ))}
-
-              </tbody>
-            </table>
+              Marketplace Status
+            </h2>
+            <p style={{ color: colors.textMuted, fontSize: 15, margin: "4px 0 0" }}>
+              Live microgrid trading activity
+            </p>
           </div>
-        )}
-      </div>
 
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", margin: "24px 0" }}>
+            {/* STATUS SEGMENTS */}
+            <div
+              style={{
+                display: "flex",
+                gap: 5,
+              }}
+            >
+              {Array.from({
+                length: totalSegments,
+              }).map((_, index) => (
+                <div
+                  key={index}
+                  style={{
+                    width: 10,
+                    height: 32,
+                    borderRadius: 3,
+                    background:
+                      index < litSegments
+                        ? colors.sky
+                        : "#e0f2fe",
+                    boxShadow:
+                      index < litSegments
+                        ? `0 0 10px ${colors.sky}77`
+                        : "none",
+                    transition: "all 0.3s ease",
+                  }}
+                />
+              ))}
+            </div>
+
+            <div
+              style={{
+                fontFamily: "Space Grotesk, sans-serif",
+                fontWeight: 800,
+                fontSize: 32, // text-3xl
+                color: colors.sky,
+                marginTop: 22,
+                letterSpacing: "-0.01em",
+              }}
+            >
+              {marketStatus.toUpperCase()}
+            </div>
+
+            <p
+              style={{
+                color: colors.textNavy,
+                fontWeight: 600,
+                marginTop: 8,
+                fontSize: 16, // text-base
+              }}
+            >
+              {marketListingsCount} active listing
+              {marketListingsCount !== 1 ? "s" : ""}
+            </p>
+          </div>
+
+          <div
+            style={{
+              width: "100%",
+              background: "rgba(2, 132, 199, 0.08)",
+              border: "1px solid #bae6fd",
+              borderRadius: 999,
+              padding: "10px 18px",
+              color: colors.sky,
+              fontSize: 14,
+              fontWeight: 600,
+            }}
+          >
+            🔋 {availableEnergy.toFixed(2)} kWh available
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
-
-// ------------------------------------------------------------
-// TABLE STYLES
-// ------------------------------------------------------------
-
-const headerStyle = {
-  textAlign: "left",
-  padding: "12px",
-  backgroundColor: "#182742",
-  color: "#9FB0C9",
-  fontSize: "11px",
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-  borderBottom:
-    "1px solid rgba(255,255,255,0.07)",
-};
-
-const cellStyle = {
-  padding: "12px",
-  color: "#EDF1F7",
-  fontSize: "13px",
-  borderBottom:
-    "1px solid rgba(255,255,255,0.06)",
-};

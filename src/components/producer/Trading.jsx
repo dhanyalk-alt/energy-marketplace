@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from "react";
+﻿import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config";
 
@@ -7,18 +7,20 @@ import { API_BASE_URL } from "../../config";
 // =========================================================
 
 const colors = {
-  bg: "#0B1420",
-  surface: "#131F30",
-  surfaceAlt: "#182742",
-  border: "rgba(255,255,255,0.07)",
-  text: "#EDF1F7",
-  textMuted: "#7C8BA3",
-  amber: "#F2A93B",
-  cyan: "#3FD0E0",
-  green: "#5FD98A",
-  orange: "#FF8A65",
-  red: "#FF6B6B",
-  violet: "#B98CF2",
+  bg: "#faf7f2",
+  surface: "#fefcf9",
+  surfaceAlt: "#efe9de",
+  border: "#d8c8b0",
+  text: "#2c221e",
+  textMuted: "#6e6056",
+  amber: "#d97706",
+  cyan: "#2f8196",
+  green: "#859b32",
+  orange: "#d97706",
+  red: "#991b1b",
+  violet: "#859b32",
+  greenGold: "#859b32",
+  warmBrown: "#4a3525",
 };
 
 // =========================================================
@@ -36,11 +38,11 @@ const styleSheet = `
 
 .tr-input {
   width: 100%;
-  background: #0F1826;
-  border: 1px solid rgba(255,255,255,0.09);
+  background: #fffdf7;
+  border: 1px solid #b8ab92;
   border-radius: 8px;
   padding: 12px 14px;
-  color: #EDF1F7;
+  color: #20201e;
   font-family: 'Inter', sans-serif;
   font-size: 14px;
   outline: none;
@@ -49,12 +51,12 @@ const styleSheet = `
 }
 
 .tr-input::placeholder {
-  color: #5A6A83;
+  color: #857c6d;
 }
 
 .tr-input:focus {
-  border-color: #F2A93B;
-  box-shadow: 0 0 0 3px rgba(242,169,59,0.15);
+  border-color: #859b32;
+  box-shadow: 0 0 0 3px rgba(133,155,50,0.18);
 }
 
 .tr-btn-primary {
@@ -66,8 +68,8 @@ const styleSheet = `
   font-weight: 700;
   font-size: 14px;
   cursor: pointer;
-  background: linear-gradient(135deg, #F2A93B, #D9860F);
-  color: #1A1305;
+  background: linear-gradient(135deg, #5c4033, #4a3525);
+  color: #fefcf9;
   transition: transform 0.12s, box-shadow 0.12s;
 }
 
@@ -84,20 +86,13 @@ const styleSheet = `
 
 .tr-btn-accept,
 .tr-btn-reject {
-  border: none;
-  border-radius: 6px;
-  padding: 7px 12px;
-  font-family: 'Inter', sans-serif;
-  font-weight: 700;
-  font-size: 12px;
-  cursor: pointer;
-  margin-right: 8px;
-  transition: opacity 0.12s;
+  background: rgba(153,27,27,0.15);
+  color: #991b1b;
 }
 
 .tr-btn-accept {
-  background: rgba(95,217,138,0.15);
-  color: #5FD98A;
+  background: rgba(133,155,50,0.15);
+  color: #859b32;
 }
 
 .tr-btn-accept:hover {
@@ -120,15 +115,15 @@ const styleSheet = `
 }
 
 .tr-table th {
-  background: #182742 !important;
-  color: #9FB0C9 !important;
+  background: #efe9de !important;
+  color: #4a3525 !important;
   font-weight: 700 !important;
   font-size: 11px !important;
   text-transform: uppercase !important;
   letter-spacing: 0.08em !important;
   text-align: center !important;
   border: none !important;
-  border-bottom: 2px solid #F2A93B !important;
+  border-bottom: 2px solid #859b32 !important;
   padding: 12px 10px !important;
 }
 
@@ -143,13 +138,13 @@ const styleSheet = `
 .tr-table td {
   text-align: center;
   padding: 12px 10px;
-  color: #EDF1F7;
+  color: #2c221e;
   font-size: 14px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  border-bottom: 1px solid #e6decb;
 }
 
 .tr-table tbody tr:hover {
-  background: rgba(255,255,255,0.025);
+  background: #f7f3ea;
 }
 
 .tr-grid {
@@ -167,6 +162,32 @@ const styleSheet = `
   .tr-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.tr-row-recommended {
+  background: rgba(133, 155, 50, 0.09) !important;
+  border-left: 3px solid #859b32;
+}
+
+.ai-recommended-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #55661b;
+  background: #f4f6e4;
+  border: 1px solid #859b32;
+  white-space: nowrap;
+}
+
+.ai-sparkle-icon {
+  display: inline-block;
 }
 `;
 
@@ -232,6 +253,9 @@ export default function Trading() {
   const [priorityLoading, setPriorityLoading] = useState(false);
   const [showPriorityPopup, setShowPriorityPopup] = useState(false);
   const [requestToAccept, setRequestToAccept] = useState(null);
+  const [selectedNegotiation, setSelectedNegotiation] = useState(null);
+  const [selectedDirectRequest, setSelectedDirectRequest] = useState(null);
+  const [actionErrors, setActionErrors] = useState({});
 
   // =======================================================
   // AI NEGOTIATIONS
@@ -246,6 +270,10 @@ export default function Trading() {
 
   const [actionLoading, setActionLoading] = useState(null);
 
+  // Tracks the fingerprint of the pending-request batch that last triggered
+  // the priority popup so we only auto-show it once per NEW batch.
+  const lastPopupBatchKey = useRef(null);
+
   // =======================================================
   // CURRENT USER
   // =======================================================
@@ -256,7 +284,7 @@ export default function Trading() {
   // LOAD NORMAL BUY REQUESTS
   // =======================================================
 
-  const loadRequests = async () => {
+  const loadRequests = async (silent = false) => {
     if (!username) {
       setRequests([]);
       return [];
@@ -292,7 +320,8 @@ export default function Trading() {
 
   // The same server-side analysis powers the Assistant and this request view.
   // It compares the full pending queue; it never accepts a request automatically.
-  const loadPriorityRecommendation = async (producerRequests) => {
+  const loadPriorityRecommendation = async (producerRequests, silent = false) => {
+    if (!silent) setPriorityLoading(true);
     const pendingRequests = producerRequests.filter(
       (request) => request.status === "Pending"
     );
@@ -304,7 +333,6 @@ export default function Trading() {
     }
 
     try {
-      setPriorityLoading(true);
       const token = localStorage.getItem("energy_marketplace_jwt");
       const storedWeather = localStorage.getItem("energy_marketplace_weather");
       let weather = null;
@@ -324,7 +352,15 @@ export default function Trading() {
       setPriorityRecommendation(recommendation);
 
       if (recommendation?.recommended_request) {
-        setShowPriorityPopup(true);
+        // Only auto-show popup once per genuinely NEW set of pending requests.
+        const batchKey = pendingRequests
+          .map((r) => r.id)
+          .sort()
+          .join(",");
+        if (batchKey !== lastPopupBatchKey.current) {
+          lastPopupBatchKey.current = batchKey;
+          setShowPriorityPopup(true);
+        }
       }
     } catch (err) {
       console.error("Failed to load AI request priority:", err);
@@ -338,14 +374,16 @@ export default function Trading() {
   // LOAD AI NEGOTIATIONS
   // =======================================================
 
-  const loadNegotiations = async () => {
+  const initialNegLoadRef = useRef(true);
+  const loadNegotiations = async (silent = false) => {
+    if (!silent && initialNegLoadRef.current) setNegotiationLoading(true);
     if (!username) {
       setNegotiations([]);
       return;
     }
 
     try {
-      setNegotiationLoading(true);
+      // silent poll avoids flicker
 
       const token = localStorage.getItem("energy_marketplace_jwt");
       const response = await axios.get(
@@ -372,6 +410,7 @@ export default function Trading() {
 
       setNegotiations([]);
     } finally {
+      initialNegLoadRef.current = false;
       setNegotiationLoading(false);
     }
   };
@@ -380,12 +419,12 @@ export default function Trading() {
   // LOAD ALL TRADING DATA
   // =======================================================
 
-  const loadTradingData = async () => {
+  const loadTradingData = async (silent = false) => {
     const [producerRequests] = await Promise.all([
-      loadRequests(),
-      loadNegotiations(),
+      loadRequests(silent),
+      loadNegotiations(silent),
     ]);
-    await loadPriorityRecommendation(producerRequests);
+    await loadPriorityRecommendation(producerRequests, silent);
   };
 
   // =======================================================
@@ -393,7 +432,16 @@ export default function Trading() {
   // =======================================================
 
   useEffect(() => {
-    loadTradingData();
+    loadTradingData(false);
+
+    // 10s silent background refresh keeps market requests in sync without UI flicker
+    const pollTimer = window.setInterval(() => loadTradingData(true), 10000);
+    const onTradeUpdate = () => loadTradingData(true);
+    window.addEventListener("energy-trade-updated", onTradeUpdate);
+    return () => {
+      window.clearInterval(pollTimer);
+      window.removeEventListener("energy-trade-updated", onTradeUpdate);
+    };
   }, []);
 
   // =======================================================
@@ -442,6 +490,7 @@ export default function Trading() {
       setPrice("");
 
       await loadTradingData();
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (err) {
       console.error(
         "Failed to add listing:",
@@ -464,6 +513,7 @@ export default function Trading() {
   const acceptRequest = async (id) => {
     try {
       setActionLoading(`request-accept-${id}`);
+      setActionErrors((current) => ({ ...current, [`request-${id}`]: "" }));
 
       const response = await axios.put(
         `${API}/trading/accept/${id}`
@@ -474,27 +524,21 @@ export default function Trading() {
         response.data
       );
 
-      alert("Buy request accepted successfully.");
-
       await loadTradingData();
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (err) {
       console.error(
         "Failed to accept request:",
         err
       );
 
-      alert(
-        err.response?.data?.detail ||
-          "Failed to accept buy request."
-      );
+      setActionErrors((current) => ({ ...current, [`request-${id}`]: err.response?.data?.detail || "Unable to update request. Please try again." }));
     } finally {
       setActionLoading(null);
     }
   };
 
-  const openAcceptRequest = (request) => {
-    setRequestToAccept(request);
-  };
+  const openAcceptRequest = (request) => acceptRequest(request.id);
 
   // =======================================================
   // REJECT NORMAL BUY REQUEST
@@ -503,6 +547,7 @@ export default function Trading() {
   const rejectRequest = async (id) => {
     try {
       setActionLoading(`request-reject-${id}`);
+      setActionErrors((current) => ({ ...current, [`request-${id}`]: "" }));
 
       const response = await axios.put(
         `${API}/trading/reject/${id}`
@@ -513,19 +558,15 @@ export default function Trading() {
         response.data
       );
 
-      alert("Buy request rejected.");
-
       await loadTradingData();
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (err) {
       console.error(
         "Failed to reject request:",
         err
       );
 
-      alert(
-        err.response?.data?.detail ||
-          "Failed to reject buy request."
-      );
+      setActionErrors((current) => ({ ...current, [`request-${id}`]: err.response?.data?.detail || "Unable to update request. Please try again." }));
     } finally {
       setActionLoading(null);
     }
@@ -540,6 +581,7 @@ export default function Trading() {
       setActionLoading(
         `negotiation-accept-${negotiationId}`
       );
+      setActionErrors((current) => ({ ...current, [`negotiation-${negotiationId}`]: "" }));
 
       const token = localStorage.getItem("energy_marketplace_jwt");
       const response = await axios.put(
@@ -557,23 +599,16 @@ export default function Trading() {
         response.data
       );
 
-      alert(
-        `Negotiation accepted.\nTransaction ID: ${
-          response.data?.transaction_id ?? "Created"
-        }`
-      );
-
       await loadTradingData();
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
+      setSelectedNegotiation(null);
     } catch (err) {
       console.error(
         "Failed to accept negotiation:",
         err
       );
 
-      alert(
-        err.response?.data?.detail ||
-          "Failed to accept negotiation."
-      );
+      setActionErrors((current) => ({ ...current, [`negotiation-${negotiationId}`]: err.response?.data?.detail || "Unable to update negotiation. Please try again." }));
     } finally {
       setActionLoading(null);
     }
@@ -588,6 +623,7 @@ export default function Trading() {
       setActionLoading(
         `negotiation-reject-${negotiationId}`
       );
+      setActionErrors((current) => ({ ...current, [`negotiation-${negotiationId}`]: "" }));
 
       const token = localStorage.getItem("energy_marketplace_jwt");
       const response = await axios.put(
@@ -605,19 +641,16 @@ export default function Trading() {
         response.data
       );
 
-      alert("Negotiation rejected.");
-
       await loadTradingData();
+      window.dispatchEvent(new CustomEvent("energy-trade-updated"));
+      setSelectedNegotiation(null);
     } catch (err) {
       console.error(
         "Failed to reject negotiation:",
         err
       );
 
-      alert(
-        err.response?.data?.detail ||
-          "Failed to reject negotiation."
-      );
+      setActionErrors((current) => ({ ...current, [`negotiation-${negotiationId}`]: err.response?.data?.detail || "Unable to update negotiation. Please try again." }));
     } finally {
       setActionLoading(null);
     }
@@ -626,11 +659,6 @@ export default function Trading() {
   // =======================================================
   // COUNTS
   // =======================================================
-
-  const pendingCount = requests.filter(
-    (request) =>
-      request.status === "Pending"
-  ).length;
 
   const pendingNegotiationCount =
     negotiations.filter(
@@ -641,6 +669,80 @@ export default function Trading() {
   const recommendedRequest =
     priorityRecommendation?.recommended_request || null;
 
+  const formatINR = (value) => new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 2,
+  }).format(Number(value || 0));
+
+  const formatDateTime = (value) => {
+    if (!value) return "Not recorded";
+    const date = new Date(value);
+    return Number.isNaN(date.getTime())
+      ? "Not recorded"
+      : new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(date);
+  };
+
+  const sameAmount = (first, second) => Math.abs(Number(first || 0) - Number(second || 0)) < 0.01;
+
+  // A negotiation and its linked BuyRequest describe one user request. Keep a
+  // single consolidated row, using the BuyRequest ID when one exists. The
+  // fallback supports historical records created before negotiation_id existed.
+  const usedRequestIds = new Set();
+  const negotiatedRows = negotiations.map((negotiation) => {
+    const negotiatedTotal = Number(negotiation.energy || 0) * Number(
+      negotiation.negotiated_price ?? negotiation.consumer_offer ?? negotiation.producer_price ?? 0,
+    );
+    const linkedRequests = requests.filter((request) =>
+      Number(request.negotiation_id) === Number(negotiation.id),
+    );
+    const historicalMatches = linkedRequests.length === 0 ? requests.filter((request) =>
+      !request.negotiation_id
+      && String(request.consumer) === String(negotiation.consumer)
+      && String(request.producer) === String(negotiation.producer)
+      && Number(request.listing_id) === Number(negotiation.listing_id)
+      && sameAmount(request.energy, negotiation.energy)
+      && sameAmount(request.total_price, negotiatedTotal),
+    ) : [];
+    const allMatches = linkedRequests.length ? linkedRequests : historicalMatches;
+    const linkedRequest = allMatches.find((request) => request.status === negotiation.status) || allMatches[0];
+
+    // Historical producer-accept logic could leave both the pending request
+    // and a later completed request behind. They are one lifecycle, so consume
+    // every exact match and render the authoritative negotiated row once.
+    allMatches.forEach((request) => usedRequestIds.add(request.id));
+
+    return {
+      ...negotiation,
+      ...(linkedRequest || {}),
+      id: linkedRequest?.id ?? negotiation.id,
+      negotiationId: negotiation.id,
+      displayId: linkedRequest?.id ?? negotiation.id,
+      rowType: "negotiated",
+      rowKey: linkedRequest ? `request-${linkedRequest.id}` : `negotiation-${negotiation.id}`,
+      status: negotiation.status || linkedRequest?.status,
+      totalPrice: linkedRequest ? Number(linkedRequest.total_price || negotiatedTotal) : negotiatedTotal,
+      created_at: linkedRequest?.created_at ?? negotiation.created_at,
+    };
+  });
+
+  const directRows = requests
+    .filter((request) => !usedRequestIds.has(request.id))
+    .map((request) => ({
+      ...request,
+      displayId: request.id,
+      rowType: "direct",
+      rowKey: `request-${request.id}`,
+      totalPrice: Number(request.total_price || 0),
+    }));
+
+  const unifiedRequests = [...negotiatedRows, ...directRows]
+    .sort((first, second) => Number(second.displayId) - Number(first.displayId));
+  const activeRequestRows = unifiedRequests.filter((request, index) =>
+    index < 20 || !["Accepted", "Rejected"].includes(request.status)
+  );
+  const consolidatedPendingCount = unifiedRequests.filter((request) => request.status === "Pending").length;
+
   // =======================================================
   // UI
   // =======================================================
@@ -650,7 +752,7 @@ export default function Trading() {
       style={{
         minHeight: "100vh",
         background:
-          `radial-gradient(circle at 85% 0%, #16233A 0%, ${colors.bg} 55%)`,
+          `linear-gradient(135deg, #faf7f2 0%, #f5f0eb 55%, #faf7f2 100%)`,
         padding: "32px 28px 60px",
         fontFamily: "Inter, sans-serif",
       }}
@@ -831,10 +933,10 @@ export default function Trading() {
                 margin: 0,
               }}
             >
-              Incoming Buy Requests
+              ⚡ Energy Trading Requests
             </h2>
 
-            {pendingCount > 0 && (
+            {consolidatedPendingCount > 0 && (
               <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                 <span
                   style={{
@@ -846,7 +948,7 @@ export default function Trading() {
                     borderRadius: 20,
                   }}
                 >
-                  {pendingCount} pending
+                  {consolidatedPendingCount} pending
                 </span>
                 <button
                   type="button"
@@ -910,7 +1012,7 @@ export default function Trading() {
                 <tr>
                   <th>ID</th>
                   <th>Consumer</th>
-                  <th>Producer</th>
+                  <th>Type</th>
                   <th>Energy</th>
                   <th>Total Price</th>
                   <th>Status</th>
@@ -919,7 +1021,9 @@ export default function Trading() {
               </thead>
 
               <tbody>
-                {requests.length === 0 ? (
+                {negotiationLoading ? (
+                  <tr><td colSpan={7} style={{ padding: "28px 10px", color: colors.textMuted }}>Loading trading requests...</td></tr>
+                ) : activeRequestRows.length === 0 ? (
                   <tr>
                     <td
                       colSpan={7}
@@ -928,31 +1032,52 @@ export default function Trading() {
                         color: colors.textMuted,
                       }}
                     >
-                      No buy requests yet.
+                      No trading requests yet.
                     </td>
                   </tr>
                 ) : (
-                  requests.map((req) => {
+                  activeRequestRows.map((req) => {
                     const isPending =
                       req.status === "Pending";
+                    const isNegotiation = req.rowType === "negotiated";
+                    // Use Number() coercion: API may return request_id as a
+                    // string while req.id is a number — strict === would silently fail.
                     const isRecommended =
-                      isPending && recommendedRequest?.request_id === req.id;
+                      isPending &&
+                      recommendedRequest != null &&
+                      Number(recommendedRequest.request_id) === Number(req.id);
 
                     return (
-                      <tr key={req.id}>
-                        <td>{req.id}</td>
+                      <tr key={req.rowKey} className={isRecommended ? "tr-row-recommended" : undefined}>
+                        <td>{req.displayId}</td>
 
                         <td>
                           {req.consumer}
                           {isRecommended && (
-                            <div style={{ color: colors.violet, fontSize: 11, fontWeight: 700, marginTop: 3 }}>
-                              🎯 AI priority
+                            <div className="ai-recommended-badge">
+                              <span className="ai-sparkle-icon">✨</span>
+                              AI Recommended
+                              <span className="ai-sparkle-icon">✨</span>
                             </div>
                           )}
                         </td>
 
                         <td>
-                          {req.producer}
+                          <button
+                            type="button"
+                            onClick={() => isNegotiation ? setSelectedNegotiation(req) : setSelectedDirectRequest(req)}
+                            style={{
+                              border: `1px solid ${isNegotiation ? "rgba(120,88,166,.45)" : "rgba(47,129,150,.42)"}`,
+                              borderRadius: 999,
+                              padding: "7px 10px",
+                              color: isNegotiation ? "#7858a6" : "#2f8196",
+                              background: isNegotiation ? "rgba(120,88,166,.10)" : "rgba(47,129,150,.10)",
+                              fontWeight: 700,
+                              cursor: "pointer",
+                            }}
+                          >
+                            {isNegotiation ? "🟣 Negotiated" : "🟦 Direct Buying"}
+                          </button>
                         </td>
 
                         <td>
@@ -960,10 +1085,7 @@ export default function Trading() {
                         </td>
 
                         <td>
-                          â‚¹
-                          {Number(
-                            req.total_price || 0
-                          ).toFixed(2)}
+                          {formatINR(req.totalPrice)}
                         </td>
 
                         <td
@@ -979,18 +1101,24 @@ export default function Trading() {
                         </td>
 
                         <td>
-                          {isPending ? (
+                          {isNegotiation && isPending ? (
+                            <button className="tr-btn-primary" type="button" onClick={() => setSelectedNegotiation(req)} style={{ width: "auto", padding: "8px 14px", margin: 0 }}>
+                              View
+                            </button>
+                          ) : isNegotiation ? (
+                            <span style={{ color: req.status === "Accepted" ? colors.green : colors.red, fontSize: 13, fontWeight: 700 }}>
+                              {req.status === "Accepted" ? "Completed" : "Rejected"}
+                            </span>
+                          ) : isPending ? (
                             <>
                               <button
                                 className="tr-btn-accept"
-                                disabled={
-                                  actionLoading !== null
-                                }
+                                disabled={actionLoading !== null}
                                 onClick={() =>
                                   openAcceptRequest(req)
                                 }
                               >
-                                Accept
+                                {actionLoading === `request-accept-${req.id}` ? "Processing..." : "Accept"}
                               </button>
 
                               <button
@@ -1006,9 +1134,10 @@ export default function Trading() {
                               >
                                 {actionLoading ===
                                 `request-reject-${req.id}`
-                                  ? "..."
+                                  ? "Processing..."
                                   : "Reject"}
                               </button>
+                              {actionErrors[`request-${req.id}`] && <div style={{ color: colors.red, fontSize: 12, marginTop: 6 }}>{actionErrors[`request-${req.id}`]}</div>}
                             </>
                           ) : (
                             <span
@@ -1018,7 +1147,7 @@ export default function Trading() {
                                 fontSize: 13,
                               }}
                             >
-                              â€”
+                              {req.status === "Accepted" ? "Completed" : "Rejected"}
                             </span>
                           )}
                         </td>
@@ -1036,6 +1165,7 @@ export default function Trading() {
           AI NEGOTIATIONS
       =================================================== */}
 
+      {false && (
       <div className="tr-full">
         <Panel>
           {/* HEADER */}
@@ -1312,6 +1442,69 @@ export default function Trading() {
           </div>
         </Panel>
       </div>
+      )}
+
+      {selectedNegotiation && (
+        <div role="dialog" aria-modal="true" aria-label="Negotiation Request" style={{ position: "fixed", inset: 0, zIndex: 52, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "rgba(44,34,30,.65)" }}>
+          <div style={{ width: "min(720px, 92vw)", maxHeight: "90vh", overflowY: "auto", padding: "30px 32px", borderRadius: 18, border: "1px solid #d8c8b0", background: "#fefcf9", color: "#2c221e", boxShadow: "0 24px 75px rgba(44,34,30,.22)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 18 }}>
+              <div><h2 style={{ margin: 0, fontSize: 27 }}>🟣 Negotiated Request Details</h2><p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 17 }}><strong style={{ color: "#fff" }}>{selectedNegotiation.consumer}</strong> · Request #{selectedNegotiation.displayId ?? selectedNegotiation.id} · {selectedNegotiation.energy} kWh</p></div>
+              <button type="button" onClick={() => setSelectedNegotiation(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#fff", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
+            </div>
+
+            <section style={{ marginTop: 25 }}>
+              <h3 style={{ margin: "0 0 12px", color: "#859b32", fontSize: 18 }}>💰 Negotiation Audit Trail</h3>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12 }}>
+                {[['Initial producer price', selectedNegotiation.producer_price], ['Consumer counter-offer', selectedNegotiation.consumer_offer], ['Final agreed price', selectedNegotiation.negotiated_price]].map(([label, value]) => (
+                  <div key={label} style={{ padding: 16, borderRadius: 12, background: "#faf7f2", border: "1px solid #e6decb" }}><div style={{ color: "#6e6056", fontSize: 14 }}>{label}</div><strong style={{ display: "block", marginTop: 6, color: "#859b32", fontSize: 21 }}>{formatINR(value)}/kWh</strong></div>
+                ))}
+              </div>
+            </section>
+
+            <section style={{ marginTop: 18, padding: 18, borderRadius: 12, background: "#faf7f2" }}>
+              <h3 style={{ margin: 0, color: "#fff", fontSize: 18 }}>🕒 Recorded negotiation events</h3>
+              <div style={{ marginTop: 13, display: "grid", gap: 9, color: "#6e6056", fontSize: 16, lineHeight: 1.45 }}>
+                <div><strong style={{ color: "#fff" }}>Negotiation created:</strong> {formatDateTime(selectedNegotiation.created_at)}</div>
+                <div><strong style={{ color: "#fff" }}>Current/final status:</strong> {selectedNegotiation.status || "Pending"}</div>
+                <div style={{ fontSize: 14 }}>This request stores its initial price, consumer counter-offer, and final agreed price above. No separate per-message negotiation logs were recorded for this request.</div>
+              </div>
+            </section>
+
+            <section style={{ marginTop: 24, padding: 18, borderRadius: 12, background: "#faf7f2" }}>
+              <h3 style={{ margin: 0, color: "#fff", fontSize: 18 }}>👤 Consumer Information</h3>
+              <p style={{ margin: "13px 0 0", color: "#6e6056", fontSize: 16 }}>Urgency: <strong style={{ color: selectedNegotiation.urgency === "Critical" ? "#ff9b93" : selectedNegotiation.urgency === "Essential" ? "#ffbd75" : "#80d89c" }}>{selectedNegotiation.urgency || "Normal"}</strong></p>
+              <p style={{ margin: "10px 0 0", color: "#6e6056", fontSize: 16, lineHeight: 1.55 }}>Consumer&apos;s Reason: <span style={{ color: "#fff" }}>{selectedNegotiation.reason || "Not provided"}</span></p>
+            </section>
+
+            {actionErrors[`negotiation-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}`] && <p style={{ margin: "16px 0 0", color: "#ff9b93", fontSize: 15 }}>{actionErrors[`negotiation-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}`]}</p>}
+            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 26 }}>
+              <button type="button" className="tr-btn-reject" disabled={actionLoading !== null} onClick={() => rejectNegotiation(selectedNegotiation.negotiationId ?? selectedNegotiation.id)} style={{ margin: 0, padding: "13px 18px", fontSize: 17 }}>{actionLoading === `negotiation-reject-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}` ? "Processing..." : "Reject"}</button>
+              <button type="button" className="tr-btn-accept" disabled={actionLoading !== null} onClick={() => acceptNegotiation(selectedNegotiation.negotiationId ?? selectedNegotiation.id)} style={{ margin: 0, padding: "13px 18px", fontSize: 17 }}>{actionLoading === `negotiation-accept-${selectedNegotiation.negotiationId ?? selectedNegotiation.id}` ? "Processing..." : "Accept"}</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {selectedDirectRequest && (
+        <div role="dialog" aria-modal="true" aria-label="Direct Buying Request" style={{ position: "fixed", inset: 0, zIndex: 52, display: "flex", alignItems: "center", justifyContent: "center", padding: 24, background: "rgba(44,34,30,.65)" }}>
+          <div style={{ width: "min(650px, 92vw)", padding: "28px 30px", borderRadius: 18, border: "1px solid #d8c8b0", background: "#fefcf9", color: "#2c221e", boxShadow: "0 24px 75px rgba(44,34,30,.22)" }}>
+            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 18 }}>
+              <div><h2 style={{ margin: 0, fontSize: 25 }}>🟦 Direct Buying Request</h2><p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 16 }}>Request details only. Use the table action buttons to accept or reject.</p></div>
+              <button type="button" onClick={() => setSelectedDirectRequest(null)} aria-label="Close" style={{ border: 0, background: "transparent", color: "#fff", cursor: "pointer", fontSize: 30, lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 18, marginTop: 24 }}>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Consumer</div><strong style={{ display: "block", marginTop: 5, fontSize: 20 }}>{selectedDirectRequest.consumer}</strong></div>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Energy Required</div><strong style={{ display: "block", marginTop: 5, fontSize: 20 }}>{selectedDirectRequest.energy} kWh</strong></div>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Fixed Price / kWh</div><strong style={{ display: "block", marginTop: 5, fontSize: 20 }}>{formatINR(selectedDirectRequest.offered_price ?? (Number(selectedDirectRequest.total_price || 0) / Number(selectedDirectRequest.energy || 1)))}</strong></div>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Total Price</div><strong style={{ display: "block", marginTop: 5, fontSize: 20 }}>{formatINR(selectedDirectRequest.total_price)}</strong></div>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Submitted</div><strong style={{ display: "block", marginTop: 5, fontSize: 16 }}>{formatDateTime(selectedDirectRequest.created_at)}</strong></div>
+              <div><div style={{ color: "#6e6056", fontSize: 14 }}>Final Status</div><strong style={{ display: "block", marginTop: 5, fontSize: 18 }}>{selectedDirectRequest.status || "Pending"}</strong></div>
+              {selectedDirectRequest.urgency && <div><div style={{ color: "#6e6056", fontSize: 14 }}>Urgency</div><strong style={{ display: "block", marginTop: 5, color: selectedDirectRequest.urgency === "Critical" ? "#ff9b93" : "#ffbd75", fontSize: 18 }}>{selectedDirectRequest.urgency}</strong></div>}
+            </div>
+            <div style={{ marginTop: 22, padding: 18, borderRadius: 12, background: "#393228" }}><div style={{ color: "#6e6056", fontSize: 14 }}>Reason</div><p style={{ margin: "8px 0 0", color: "#fff", fontSize: 17, lineHeight: 1.55 }}>{selectedDirectRequest.reason || "Not provided"}</p></div>
+          </div>
+        </div>
+      )}
 
       {showPriorityPopup && recommendedRequest && (
         <div
@@ -1325,45 +1518,45 @@ export default function Trading() {
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: 20,
-            background: "rgba(4, 10, 19, 0.76)",
+            padding: 24,
+            background: "rgba(44, 34, 30, 0.65)",
           }}
         >
-          <div style={{ width: "min(560px, 100%)", background: colors.surface, border: "1px solid rgba(185,140,242,0.45)", borderRadius: 14, padding: 24, boxShadow: "0 18px 60px rgba(0,0,0,0.45)" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 16, alignItems: "flex-start" }}>
+          <div style={{ width: "min(820px, 92vw)", maxHeight: "90vh", overflowY: "auto", background: "#fefcf9", border: "1px solid #d8c8b0", borderRadius: 18, padding: "30px 32px", boxShadow: "0 24px 75px rgba(44,34,30,0.22)", color: "#2c221e" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 20, alignItems: "flex-start" }}>
               <div>
-                <div style={{ color: colors.violet, fontSize: 18, fontWeight: 700 }}>🎯 AI Priority Recommendation</div>
-                <p style={{ margin: "7px 0 0", color: colors.textMuted, fontSize: 13 }}>
+                <div style={{ color: "#859b32", fontSize: 27, fontWeight: 700 }}>🎯 AI Priority Recommendation</div>
+                <p style={{ margin: "9px 0 0", color: "#6e6056", fontSize: 17, lineHeight: 1.5 }}>
                   Compared across all {priorityRecommendation?.requests?.length || 0} pending request{priorityRecommendation?.requests?.length === 1 ? "" : "s"}. Your decision remains final.
                 </p>
               </div>
-              <button type="button" onClick={() => setShowPriorityPopup(false)} style={{ border: "none", background: "transparent", color: colors.textMuted, fontSize: 22, cursor: "pointer" }} aria-label="Close">×</button>
+              <button type="button" onClick={() => setShowPriorityPopup(false)} style={{ border: "none", background: "transparent", color: "#ffffff", fontSize: 30, lineHeight: 1, cursor: "pointer" }} aria-label="Close">×</button>
             </div>
 
-            <div style={{ marginTop: 18, padding: 16, background: colors.surfaceAlt, borderRadius: 10 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-                <div><div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase" }}>Recommended consumer</div><strong style={{ color: colors.text, fontSize: 18 }}>{recommendedRequest.consumer}</strong></div>
-                <div style={{ textAlign: "right" }}><div style={{ color: colors.textMuted, fontSize: 11, textTransform: "uppercase" }}>Priority level</div><strong style={{ color: colors.violet, fontSize: 18 }}>{recommendedRequest.priority_level} · {recommendedRequest.score}/100</strong></div>
+            <div style={{ marginTop: 24, padding: "22px 24px", background: "#faf7f2", border: "1px solid #e6decb", borderRadius: 14 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 18 }}>
+                <div><div style={{ color: "#6e6056", fontSize: 15, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Recommended consumer</div><strong style={{ color: "#ffffff", fontSize: 25 }}>{recommendedRequest.consumer}</strong></div>
+                <div style={{ textAlign: "right" }}><div style={{ color: "#6e6056", fontSize: 15, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em" }}>Priority level</div><strong style={{ color: "#859b32", fontSize: 24 }}>{recommendedRequest.priority_level} · {recommendedRequest.score}/100</strong></div>
               </div>
-              <p style={{ margin: "14px 0 0", color: colors.text, lineHeight: 1.55, fontSize: 14 }}><strong>Why: </strong>{recommendedRequest.explanation}</p>
+              <p style={{ margin: "18px 0 0", color: "#ffffff", lineHeight: 1.6, fontSize: 18 }}><strong>Why: </strong>{recommendedRequest.explanation}</p>
             </div>
 
-            <div style={{ marginTop: 16, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: 9, fontSize: 13 }}>
-              <div style={{ color: colors.textMuted }}>Reason<br /><span style={{ color: colors.text }}>{recommendedRequest.reason}</span></div>
-              <div style={{ color: colors.textMuted }}>Urgency<br /><span style={{ color: colors.text }}>{recommendedRequest.urgency}</span></div>
-              <div style={{ color: colors.textMuted }}>Energy required<br /><span style={{ color: colors.text }}>{recommendedRequest.energy} kWh</span></div>
-              <div style={{ color: colors.textMuted }}>Offered price<br /><span style={{ color: colors.text }}>₹{recommendedRequest.offered_price}/kWh</span></div>
-              <div style={{ color: colors.textMuted }}>Consumer reliability<br /><span style={{ color: colors.text }}>{recommendedRequest.reliability?.score}/100 — {recommendedRequest.reliability?.explanation}</span></div>
-              <div style={{ color: colors.textMuted }}>Available producer energy<br /><span style={{ color: colors.text }}>{priorityRecommendation?.available_energy ?? 0} kWh</span></div>
+            <div style={{ marginTop: 22, display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "20px 28px", fontSize: 16, lineHeight: 1.5 }}>
+              <div style={{ color: "#6e6056" }}>Reason<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.reason}</span></div>
+              <div style={{ color: "#6e6056" }}>Urgency<br /><span style={{ color: "#ffbd75", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.urgency}</span></div>
+              <div style={{ color: "#6e6056" }}>Energy required<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{recommendedRequest.energy} kWh</span></div>
+              <div style={{ color: "#6e6056" }}>Offered price<br /><span style={{ color: "#859b32", fontSize: 18, fontWeight: 600 }}>₹{recommendedRequest.offered_price}/kWh</span></div>
+              <div style={{ color: "#6e6056" }}>Consumer reliability<br /><span style={{ color: "#ffffff", fontSize: 17, fontWeight: 600 }}>{recommendedRequest.reliability?.score}/100 — {recommendedRequest.reliability?.explanation}</span></div>
+              <div style={{ color: "#6e6056" }}>Available producer energy<br /><span style={{ color: "#ffffff", fontSize: 18, fontWeight: 600 }}>{priorityRecommendation?.available_energy ?? 0} kWh</span></div>
             </div>
 
-            <button type="button" className="tr-btn-primary" onClick={() => setShowPriorityPopup(false)} style={{ marginTop: 20 }}>Review Requests</button>
+            <button type="button" className="tr-btn-primary" onClick={() => setShowPriorityPopup(false)} style={{ marginTop: 28, minHeight: 54, fontSize: 19 }}>Review Requests</button>
           </div>
         </div>
       )}
 
       {requestToAccept && (
-        <div role="dialog" aria-modal="true" aria-label="Accept Buy Request" style={{ position: "fixed", inset: 0, zIndex: 51, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(4, 10, 19, 0.76)" }}>
+        <div role="dialog" aria-modal="true" aria-label="Accept Buy Request" style={{ position: "fixed", inset: 0, zIndex: 51, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: "rgba(44, 34, 30, 0.65)" }}>
           <div style={{ width: "min(510px, 100%)", background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 14, padding: 24, boxShadow: "0 18px 60px rgba(0,0,0,0.45)" }}>
             <h2 style={{ margin: 0, color: colors.text, fontSize: 19 }}>Accept buy request?</h2>
             <p style={{ color: colors.textMuted, lineHeight: 1.55, fontSize: 14 }}>

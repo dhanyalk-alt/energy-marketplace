@@ -830,6 +830,7 @@ async def consumer_accept_negotiation(
                 reason=negotiation.reason,
                 urgency=negotiation.urgency,
                 offered_price=negotiation.negotiated_price,
+                negotiation_id=negotiation.id,
             )
 
             db.add(
@@ -845,6 +846,10 @@ async def consumer_accept_negotiation(
             buy_request.total_price = (
                 total_amount
             )
+            buy_request.reason = negotiation.reason
+            buy_request.urgency = negotiation.urgency
+            buy_request.offered_price = negotiation.negotiated_price
+            buy_request.negotiation_id = negotiation.id
 
         # -------------------------------------------------
         # 9. IMPORTANT:
@@ -1066,16 +1071,58 @@ async def producer_accept_negotiation(
 
         total_amount = round(float(negotiation.energy) * float(negotiation.negotiated_price), 2)
 
-        buy_request = BuyRequest(
-            consumer=negotiation.consumer,
-            producer=negotiation.producer,
-            listing_id=negotiation.listing_id,
-            energy=negotiation.energy,
-            total_price=total_amount,
-            status="Accepted",
+        # Reuse the pending request created when the consumer accepted the
+        # counter-offer.  Previously this endpoint inserted a second row,
+        # causing one negotiation to appear as both Direct Buying and
+        # Negotiation in the producer table.
+        result = await db.execute(
+            select(BuyRequest)
+            .where(
+                BuyRequest.negotiation_id == negotiation.id,
+                BuyRequest.status == "Pending",
+            )
+            .order_by(BuyRequest.id.desc())
         )
-        db.add(buy_request)
-        await db.flush()
+        buy_request = result.scalars().first()
+
+        # Compatibility for requests created before negotiation_id existed.
+        if buy_request is None:
+            result = await db.execute(
+                select(BuyRequest)
+                .where(
+                    BuyRequest.listing_id == negotiation.listing_id,
+                    BuyRequest.consumer == negotiation.consumer,
+                    BuyRequest.producer == negotiation.producer,
+                    BuyRequest.energy == negotiation.energy,
+                    BuyRequest.total_price == total_amount,
+                    BuyRequest.status == "Pending",
+                )
+                .order_by(BuyRequest.id.desc())
+            )
+            buy_request = result.scalars().first()
+
+        if buy_request is None:
+            buy_request = BuyRequest(
+                consumer=negotiation.consumer,
+                producer=negotiation.producer,
+                listing_id=negotiation.listing_id,
+                energy=negotiation.energy,
+                total_price=total_amount,
+                status="Accepted",
+                reason=negotiation.reason,
+                urgency=negotiation.urgency,
+                offered_price=negotiation.negotiated_price,
+                negotiation_id=negotiation.id,
+            )
+            db.add(buy_request)
+            await db.flush()
+        else:
+            buy_request.status = "Accepted"
+            buy_request.total_price = total_amount
+            buy_request.reason = negotiation.reason
+            buy_request.urgency = negotiation.urgency
+            buy_request.offered_price = negotiation.negotiated_price
+            buy_request.negotiation_id = negotiation.id
 
         listing.energy = round(float(listing.energy) - float(negotiation.energy), 2)
         if listing.energy <= 0:
@@ -1177,15 +1224,31 @@ async def producer_reject_negotiation(
         result = await db.execute(
             select(BuyRequest)
             .where(
-                BuyRequest.listing_id == negotiation.listing_id,
-                BuyRequest.consumer == negotiation.consumer,
-                BuyRequest.producer == negotiation.producer,
-                BuyRequest.energy == negotiation.energy,
+                BuyRequest.negotiation_id == negotiation.id,
                 BuyRequest.status == "Pending",
             )
             .order_by(BuyRequest.id.desc())
         )
         buy_request = result.scalars().first()
+
+        # Compatibility with historical rows that do not have the new link.
+        if buy_request is None:
+            total_amount = round(float(negotiation.energy) * float(negotiation.negotiated_price or 0), 2)
+            result = await db.execute(
+                select(BuyRequest)
+                .where(
+                    BuyRequest.listing_id == negotiation.listing_id,
+                    BuyRequest.consumer == negotiation.consumer,
+                    BuyRequest.producer == negotiation.producer,
+                    BuyRequest.energy == negotiation.energy,
+                    BuyRequest.total_price == total_amount,
+                    BuyRequest.status == "Pending",
+                )
+                .order_by(BuyRequest.id.desc())
+            )
+            buy_request = result.scalars().first()
+            if buy_request is not None:
+                buy_request.negotiation_id = negotiation.id
 
         negotiation.status = "Rejected"
         if buy_request is not None:

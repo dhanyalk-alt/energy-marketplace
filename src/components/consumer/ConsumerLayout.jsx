@@ -99,10 +99,10 @@ export default function ConsumerLayout({ onLogout }) {
         height: "100vh",
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "#f8fafc",
+        background: "linear-gradient(135deg, #f0f7ff 0%, #e0f2fe 100%)",
         fontFamily:
           "Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
-        color: "#111827",
+        color: "#0f172a",
         overflow: "hidden",
         boxSizing: "border-box",
       }}
@@ -123,8 +123,10 @@ export default function ConsumerLayout({ onLogout }) {
 
           padding: "0 32px",
 
-          backgroundColor: "#ffffff",
-          borderBottom: "1px solid #e5e7eb",
+          backgroundColor: "rgba(255, 255, 255, 0.9)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid #bae6fd",
 
           position: "relative",
           zIndex: 1000,
@@ -415,20 +417,13 @@ export default function ConsumerLayout({ onLogout }) {
             minWidth: 0,
             minHeight: 0,
 
-            backgroundColor: "#ffffff",
-
-            border: "1px solid #e5e7eb",
-
+            backgroundColor: "transparent",
+            border: "none",
             borderRadius: "20px",
-
-            padding: "30px",
-
+            padding: "0",
             overflowY: "auto",
             overflowX: "hidden",
-
-            boxShadow:
-              "0 5px 22px rgba(15,23,42,0.06)",
-
+            boxShadow: "none",
             boxSizing: "border-box",
           }}
         >
