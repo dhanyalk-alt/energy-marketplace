@@ -270,7 +270,7 @@ async def create_trading(
         if energy is not None:
             if energy <= 0:
                 raise Exception("Energy must be greater than zero.")
-            trade.energy = energy
+            trade.energy = round(float(trade.energy) + energy, 2)
         if price is not None:
             if price < 0:
                 raise Exception("Price cannot be negative.")
