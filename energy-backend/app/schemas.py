@@ -49,8 +49,8 @@ class TokenData(BaseModel):
 
 class TradingCreate(BaseModel):
     producer: str
-    energy: float
-    price: float
+    energy: float | None = None
+    price: float | None = None
 
 
 class TradingResponse(BaseModel):

@@ -430,7 +430,7 @@ export default function ProducerOverview() {
                 Revenue Analytics
               </h2>
               <p style={{ color: C.textMuted, fontSize: 14, margin: "5px 0 0" }}>
-                Completed sales in the current {revenueRange.toLowerCase()}.
+                {revenueRange === "Month" ? "Completed sales in the last 30 days." : `Completed sales in the current ${revenueRange.toLowerCase()}.`}
               </p>
             </div>
             <TimeRangeSelect

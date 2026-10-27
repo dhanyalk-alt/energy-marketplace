@@ -984,7 +984,6 @@ export default function Market() {
                 <th>Available Energy</th>
                 <th>Selling Price</th>
                 <th>Status</th>
-                <th>Action</th>
               </tr>
             </thead>
 
@@ -992,7 +991,7 @@ export default function Market() {
               {loading ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={4}
                     style={{
                       padding:
                         "40px 12px",
@@ -1007,7 +1006,7 @@ export default function Market() {
               ) : listings.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={4}
                     style={{
                       padding:
                         "40px 12px",
@@ -1094,33 +1093,6 @@ export default function Market() {
                       >
                         {item.status}
                       </span>
-                    </td>
-
-                    {/* Action */}
-
-                    <td>
-                      <button
-                        className="market-buy"
-                        onClick={() => {
-                          alert(
-                            `Selected ${item.producer}'s listing #${item.id}`
-                          );
-                        }}
-                        style={{
-                          border: "none",
-                          background:
-                            colors.cyan,
-                          color: "#071018",
-                          padding:
-                            "8px 14px",
-                          borderRadius: 7,
-                          cursor: "pointer",
-                          fontWeight: 700,
-                          fontSize: 12,
-                        }}
-                      >
-                        View Listing
-                      </button>
                     </td>
 
                   </tr>

@@ -103,12 +103,14 @@ async def add_trading(
             detail="The buy request could not be completed because its trade data is no longer valid. Refresh and try again.",
         )
 
+    except HTTPException:
+        raise
     except Exception as e:
         await db.rollback()
-        logger.exception("Unexpected error while accepting buy request %s", id)
+        logger.exception("Unexpected error while adding/updating trading listing")
         raise HTTPException(
-            status_code=500,
-            detail="The buy request could not be completed. Please try again.",
+            status_code=400,
+            detail=str(e) or "Failed to update energy listing.",
         )
 
 

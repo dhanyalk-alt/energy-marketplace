@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useRef } from "react";
+import { CheckCircle2, AlertCircle, X } from "lucide-react";
 import axios from "axios";
 import { API_BASE_URL } from "../../config";
 
@@ -189,6 +190,93 @@ const styleSheet = `
 .ai-sparkle-icon {
   display: inline-block;
 }
+
+.sell-confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.62);
+  backdrop-filter: blur(3px);
+}
+
+.sell-confirm-card {
+  width: min(100%, 440px);
+  padding: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.7);
+  border-radius: 20px;
+  background: #fffdf7;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.3);
+  text-align: center;
+  animation: sell-confirm-enter 160ms ease-out;
+}
+
+.sell-confirm-message {
+  margin: 0 0 28px;
+  color: #2c221e;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.sell-confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+}
+
+.sell-confirm-button {
+  min-width: 112px;
+  padding: 12px 22px;
+  border: 0;
+  border-radius: 10px;
+  font-family: 'Inter', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+}
+
+.sell-confirm-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.18);
+}
+
+.sell-confirm-button:focus-visible {
+  outline: 3px solid #2f8196;
+  outline-offset: 3px;
+}
+
+.sell-confirm-yes {
+  background: #859b32;
+  color: white;
+}
+
+.sell-confirm-yes:hover {
+  background: #718529;
+}
+
+.sell-confirm-no {
+  background: #efe9de;
+  color: #4a3525;
+}
+
+.sell-confirm-no:hover {
+  background: #e4dacb;
+}
+
+@keyframes sell-confirm-enter {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sell-confirm-card,
+  .sell-confirm-button { animation: none; transition: none; }
+}
 `;
 
 // =========================================================
@@ -248,6 +336,10 @@ export default function Trading() {
   const [activeListing, setActiveListing] = useState(null);
   const [initialListingPrice, setInitialListingPrice] = useState(null);
   const [successToast, setSuccessToast] = useState("");
+  const toastTimerRef = useRef(null);
+  const [errorToast, setErrorToast] = useState("");
+  const errorTimerRef = useRef(null);
+  const [showSellConfirm, setShowSellConfirm] = useState(false);
 
   // =======================================================
   // NORMAL BUY REQUESTS
@@ -278,6 +370,15 @@ export default function Trading() {
   // Tracks the fingerprint of the pending-request batch that last triggered
   // the priority popup so we only auto-show it once per NEW batch.
   const lastPopupBatchKey = useRef(null);
+
+  useEffect(() => {
+    if (!showSellConfirm) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setShowSellConfirm(false);
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showSellConfirm]);
 
   // =======================================================
   // CURRENT USER
@@ -315,7 +416,8 @@ export default function Trading() {
       await axios.post(`${API}/trading/inventory/${encodeURIComponent(username)}/publish`);
       await loadProsumerInventory();
       setSuccessToast("Consumer Energy added to Available Energy and your listing.");
-      window.setTimeout(() => setSuccessToast(""), 4000);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setSuccessToast(""), 4000);
       window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (error) {
       alert(error.response?.data?.detail || "Unable to publish Consumer Energy.");
@@ -499,69 +601,102 @@ export default function Trading() {
   // =======================================================
 
   const updateListing = async () => {
-    const energyValue = Number(availableEnergy);
-    const priceValue = Number(price);
+    const showError = (msg) => {
+      setErrorToast(msg);
+      if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+      errorTimerRef.current = window.setTimeout(() => setErrorToast(""), 4000);
+    };
 
-    if (!availableEnergy || !Number.isFinite(energyValue) || energyValue <= 0) {
-      alert("Please enter a valid amount of energy.");
-      return;
-    }
+    const energyTrimmed = String(availableEnergy).trim();
+    const priceTrimmed = String(price).trim();
+    const hasEnergy = energyTrimmed !== "";
+    const hasPrice = priceTrimmed !== "";
+    const isUpdate = Boolean(activeListing);
 
-    if (!price || !Number.isFinite(priceValue) || priceValue < 0) {
-      alert("Please enter a valid selling price.");
-      return;
+    if (isUpdate) {
+      // Independent update: at least one field required
+      if (!hasEnergy && !hasPrice) {
+        showError("Please enter a valid energy quantity or selling price to update.");
+        return;
+      }
+      if (hasEnergy) {
+        const v = Number(energyTrimmed);
+        if (!Number.isFinite(v) || v <= 0) {
+          showError("Please enter a valid energy quantity.");
+          return;
+        }
+      }
+      if (hasPrice) {
+        const v = Number(priceTrimmed);
+        if (!Number.isFinite(v) || v < 0) {
+          showError("Please enter a valid selling price.");
+          return;
+        }
+      }
+    } else {
+      // New listing: both fields required
+      if (!hasEnergy || !Number.isFinite(Number(energyTrimmed)) || Number(energyTrimmed) <= 0) {
+        showError("Please enter a valid energy quantity.");
+        return;
+      }
+      if (!hasPrice || !Number.isFinite(Number(priceTrimmed)) || Number(priceTrimmed) < 0) {
+        showError("Please enter a valid selling price.");
+        return;
+      }
     }
 
     if (!username) {
-      alert("Producer username not found.");
+      showError("Producer username not found.");
       return;
     }
 
-    if (consumerEnergy > 0 && energyValue > publicEnergy) {
-      const confirmed = window.confirm("You are adding your consumer energy to your listing. Do you want to continue?");
-      if (!confirmed) return;
-      try {
-        await axios.post(`${API}/trading/inventory/${encodeURIComponent(username)}/publish`);
-      } catch (error) {
-        alert(error.response?.data?.detail || "Unable to publish Consumer Energy.");
-        return;
-      }
+    const energyValue = hasEnergy ? Number(energyTrimmed) : undefined;
+    const priceValue = hasPrice ? Number(priceTrimmed) : undefined;
+
+    // Consumer energy publish confirmation (only when adding energy beyond public supply)
+    if (hasEnergy && consumerEnergy > 0 && energyValue > publicEnergy) {
+      setShowSellConfirm(true);
+      return;
     }
 
     try {
       setListingLoading(true);
 
-      const response = await axios.post(
-        `${API}/trading/add`,
-        {
-          producer: username,
-          energy: energyValue,
-          price: priceValue,
-        }
-      );
+      const payload = { producer: username };
+      if (energyValue !== undefined) payload.energy = energyValue;
+      if (priceValue !== undefined) payload.price = priceValue;
 
-      console.log(
-        "Listing created:",
-        response.data
-      );
+      const response = await axios.post(`${API}/trading/add`, payload);
 
-      alert(activeListing ? "Listing updated successfully." : "Energy listing added successfully.");
+      console.log("Listing updated:", response.data);
+
+      // Action-specific success message
+      let successMsg;
+      if (!isUpdate) {
+        successMsg = "Energy listing added successfully!";
+      } else if (hasEnergy && hasPrice) {
+        successMsg = "Energy quantity and selling price updated successfully!";
+      } else if (hasEnergy) {
+        successMsg = "Energy quantity updated successfully!";
+      } else {
+        successMsg = "Selling price updated successfully!";
+      }
+
+      setSuccessToast(successMsg);
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = window.setTimeout(() => setSuccessToast(""), 4000);
+
       setAvailableEnergy("");
       setPrice("");
-      setInitialListingPrice(Number(response.data?.price ?? priceValue));
+      setInitialListingPrice(
+        Number(response.data?.price ?? (priceValue !== undefined ? priceValue : activeListing?.price))
+      );
       await loadProsumerInventory();
       await loadTradingData();
       window.dispatchEvent(new CustomEvent("energy-trade-updated"));
     } catch (err) {
-      console.error(
-        "Failed to add listing:",
-        err
-      );
-
-      alert(
-        err.response?.data?.detail ||
-          "Failed to add energy listing."
-      );
+      console.error("Failed to update listing:", err);
+      showError(err.response?.data?.detail || "Failed to update energy listing.");
     } finally {
       setListingLoading(false);
     }
@@ -898,11 +1033,7 @@ export default function Trading() {
           >
             <button
               type="button"
-              onClick={() => {
-                if (consumerEnergy > 0 && window.confirm("Do you want to sell?")) {
-                  publishConsumerEnergy();
-                }
-              }}
+              onClick={() => setShowSellConfirm(true)}
               disabled={listingLoading || consumerEnergy <= 0}
               style={{ border: "1px solid #cbd5e1", borderRadius: 10, padding: "12px 14px", textAlign: "left", cursor: consumerEnergy > 0 ? "pointer" : "default", background: "#f8fafc", color: colors.text }}
             >
@@ -911,12 +1042,145 @@ export default function Trading() {
                 {consumerEnergy.toFixed(2)} kWh · Click to choose whether to sell
               </span>
             </button>
+            {showSellConfirm && (
+              <div
+                className="sell-confirm-backdrop"
+                onMouseDown={(event) => {
+                  if (event.target === event.currentTarget) setShowSellConfirm(false);
+                }}
+              >
+                <section
+                  className="sell-confirm-card"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="sell-confirm-title"
+                >
+                  <p className="sell-confirm-message" id="sell-confirm-title">
+                    Do you want to sell?
+                  </p>
+                  <div className="sell-confirm-actions">
+                    <button
+                      className="sell-confirm-button sell-confirm-yes"
+                      type="button"
+                      onClick={() => {
+                        setShowSellConfirm(false);
+                        publishConsumerEnergy();
+                      }}
+                    >
+                      Yes
+                    </button>
+                    <button
+                      className="sell-confirm-button sell-confirm-no"
+                      type="button"
+                      onClick={() => setShowSellConfirm(false)}
+                    >
+                      No
+                    </button>
+                  </div>
+                </section>
+              </div>
+            )}
             <div style={{ color: colors.green, fontSize: 13, fontWeight: 700 }}>
               Public Available Energy: {publicEnergy.toFixed(2)} kWh
             </div>
             {successToast && (
-              <div role="status" style={{ position: "fixed", top: 20, right: 20, zIndex: 1000, padding: "12px 18px", borderRadius: 8, background: "#dcfce7", color: "#166534", boxShadow: "0 8px 24px rgba(0,0,0,.16)" }}>
-                {successToast}
+              <div
+                role="status"
+                aria-live="polite"
+                style={{
+                  position: "fixed",
+                  top: 20,
+                  right: 20,
+                  zIndex: 1000,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 18px",
+                  borderRadius: 8,
+                  background: "#dcfce7",
+                  color: "#166534",
+                  border: "1px solid #bbf7d0",
+                  boxShadow: "0 8px 24px rgba(0,0,0,.16)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
+                <CheckCircle2 size={18} color="#16a34a" style={{ flexShrink: 0 }} />
+                <span>{successToast}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+                    setSuccessToast("");
+                  }}
+                  aria-label="Close notification"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#166534",
+                    padding: 0,
+                    marginLeft: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: 0.7,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+            {errorToast && (
+              <div
+                role="alert"
+                aria-live="assertive"
+                style={{
+                  position: "fixed",
+                  top: 20,
+                  right: 20,
+                  zIndex: 1001,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  padding: "12px 18px",
+                  borderRadius: 8,
+                  background: "#fee2e2",
+                  color: "#991b1b",
+                  border: "1px solid #fecaca",
+                  boxShadow: "0 8px 24px rgba(0,0,0,.16)",
+                  fontWeight: 600,
+                  fontSize: 14,
+                }}
+              >
+                <AlertCircle size={18} color="#dc2626" style={{ flexShrink: 0 }} />
+                <span>{errorToast}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
+                    setErrorToast("");
+                  }}
+                  aria-label="Close error notification"
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    cursor: "pointer",
+                    color: "#991b1b",
+                    padding: 0,
+                    marginLeft: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    opacity: 0.7,
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.opacity = "1")}
+                  onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.7")}
+                >
+                  <X size={16} />
+                </button>
               </div>
             )}
             {/* ENERGY */}

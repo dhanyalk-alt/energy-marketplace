@@ -248,19 +248,9 @@ async def reject_request(
 async def create_trading(
     db: AsyncSession,
     producer: str,
-    energy: float,
-    price: float,
+    energy: float | None = None,
+    price: float | None = None,
 ):
-    if energy <= 0:
-        raise Exception(
-            "Energy must be greater than zero."
-        )
-
-    if price < 0:
-        raise Exception(
-            "Price cannot be negative."
-        )
-
     # A producer owns one current market offer. Reuse its newest active record
     # so changing an amount or price overwrites the offer instead of creating
     # duplicate rows. Older active records are retired rather than deleted to
@@ -277,14 +267,24 @@ async def create_trading(
 
     if active_listings:
         trade = active_listings[0]
-        trade.energy = energy
-        trade.price = price
+        if energy is not None:
+            if energy <= 0:
+                raise Exception("Energy must be greater than zero.")
+            trade.energy = energy
+        if price is not None:
+            if price < 0:
+                raise Exception("Price cannot be negative.")
+            trade.price = price
         trade.status = "Available"
 
         for stale_listing in active_listings[1:]:
             stale_listing.energy = 0
             stale_listing.status = "Replaced"
     else:
+        if energy is None or energy <= 0:
+            raise Exception("Energy must be greater than zero.")
+        if price is None or price < 0:
+            raise Exception("Price cannot be negative.")
         trade = Trading(
             producer=producer,
             energy=energy,
@@ -306,8 +306,8 @@ async def create_trading(
 async def create_listing(
     db: AsyncSession,
     producer: str,
-    energy: float,
-    price: float,
+    energy: float | None = None,
+    price: float | None = None,
 ):
     return await create_trading(
         db=db,

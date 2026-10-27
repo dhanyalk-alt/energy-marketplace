@@ -559,7 +559,7 @@ export default function Overview() {
                     Spending Analytics
                   </h2>
                   <p style={{ color: colors.textMuted, fontSize: 15, margin: "4px 0 0" }}>
-                    Completed purchases in the current {analyticsRange.toLowerCase()}.
+                    {analyticsRange === "Month" ? "Completed purchases in the last 30 days." : `Completed purchases in the current ${analyticsRange.toLowerCase()}.`}
                   </p>
                 </div>
               </div>

@@ -11,6 +11,10 @@ const weekdayLabel = new Intl.DateTimeFormat("en-IN", {
   weekday: "short",
   day: "2-digit",
 });
+const monthDayLabel = new Intl.DateTimeFormat("en-IN", {
+  day: "numeric",
+  month: "short",
+});
 
 function weekStart(date) {
   const start = new Date(date);
@@ -43,10 +47,11 @@ function isInSelectedPeriod(date, range, currentDate) {
   }
 
   if (range === "Month") {
-    return (
-      date.getFullYear() === currentDate.getFullYear() &&
-      date.getMonth() === currentDate.getMonth()
-    );
+    const end = startOfDay(currentDate);
+    end.setDate(end.getDate() + 1);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 30);
+    return date >= start && date < end;
   }
 
   return date.getFullYear() === currentDate.getFullYear();
@@ -77,7 +82,7 @@ function bucketForSelectedPeriod(date, range) {
     return {
       key: `day-${localDateKey(day)}`,
       timestamp: day.getTime(),
-      label: String(day.getDate()),
+      label: monthDayLabel.format(day),
     };
   }
 
@@ -112,18 +117,13 @@ function bucketsForPeriod(range, currentDate) {
   }
 
   if (range === "Month") {
-    const daysInMonth = new Date(
-      currentDate.getFullYear(),
-      currentDate.getMonth() + 1,
-      0
-    ).getDate();
-    for (let day = 1; day <= daysInMonth; day += 1) {
-      buckets.push(
-        bucketForSelectedPeriod(
-          new Date(currentDate.getFullYear(), currentDate.getMonth(), day),
-          range
-        )
-      );
+    const end = startOfDay(currentDate);
+    const start = new Date(end);
+    start.setDate(start.getDate() - 29);
+    for (let day = 0; day < 30; day += 1) {
+      const bucketDate = new Date(start);
+      bucketDate.setDate(start.getDate() + day);
+      buckets.push(bucketForSelectedPeriod(bucketDate, range));
     }
     return buckets;
   }

@@ -28,49 +28,7 @@ const colors = {
   red: "#ef4444",           // Error Red
 };
 
-// =========================================================
-// DEFAULT DEMONSTRATION STREAMS
-// (Used when consumer has no recorded transactions yet)
-// =========================================================
 
-const DEFAULT_STREAMS = [
-  {
-    id: "stream-1",
-    producer: "Gokul",
-    type: "Solar Rooftop",
-    energy: 58.5,
-    rate: 10.0,
-    status: "Active Flowing",
-    dealType: "Direct Purchase",
-    icon: "☀️",
-    voltage: "232V",
-    isLatestActive: true,
-  },
-  {
-    id: "stream-2",
-    producer: "Kripa",
-    type: "Wind Microgrid",
-    energy: 42.0,
-    rate: 11.5,
-    status: "Active Flowing",
-    dealType: "Negotiated Deal",
-    icon: "💨",
-    voltage: "230V",
-    isLatestActive: false,
-  },
-  {
-    id: "stream-3",
-    producer: "Producer1",
-    type: "Battery Storage",
-    energy: 26.5,
-    rate: 9.8,
-    status: "Active Flowing",
-    dealType: "Direct Purchase",
-    icon: "🔋",
-    voltage: "231V",
-    isLatestActive: false,
-  },
-];
 
 
 // =========================================================
@@ -294,7 +252,7 @@ export default function EnergyFlowMap() {
       setTransactions(data);
       setLastRefreshed(new Date());
     } catch (err) {
-      console.warn("Could not load consumer transactions, using microgrid simulation streams:", err);
+      console.warn("Could not load consumer transactions:", err);
       setTransactions([]);
     } finally {
       if (!silent) setLoading(false);
@@ -320,8 +278,7 @@ export default function EnergyFlowMap() {
     });
 
     if (completedOrActive.length === 0) {
-      // Return beautiful default demonstration streams when no completed trades exist yet
-      return DEFAULT_STREAMS;
+      return [];
     }
 
     // Find the single most recent transaction (by created_at) to mark as the active stream
@@ -845,71 +802,73 @@ export default function EnergyFlowMap() {
           {/* ===================================================
               DESTINATION NODE: ACTIVE CONSUMER CARD (RIGHT SIDE)
           =================================================== */}
-          <g transform={`translate(${consumerX}, ${consumerY})`}>
-            {/* Halo pulse effect */}
-            <rect
-              x="-6"
-              y="-6"
-              width={consumerWidth + 12}
-              height={consumerHeight + 12}
-              rx="20"
-              fill="none"
-              stroke="rgba(2, 132, 199, 0.25)"
-              strokeWidth="2"
-              strokeDasharray="6 6"
-            />
+          {streams.length > 0 && (
+            <g transform={`translate(${consumerX}, ${consumerY})`}>
+              {/* Halo pulse effect */}
+              <rect
+                x="-6"
+                y="-6"
+                width={consumerWidth + 12}
+                height={consumerHeight + 12}
+                rx="20"
+                fill="none"
+                stroke="rgba(2, 132, 199, 0.25)"
+                strokeWidth="2"
+                strokeDasharray="6 6"
+              />
 
-            {/* Consumer Card Box */}
-            <rect
-              x="0"
-              y="0"
-              width={consumerWidth}
-              height={consumerHeight}
-              rx="16"
-              fill="#ffffff"
-              stroke={colors.sky}
-              strokeWidth="2"
-              filter="drop-shadow(0 12px 28px rgba(2, 132, 199, 0.16))"
-            />
+              {/* Consumer Card Box */}
+              <rect
+                x="0"
+                y="0"
+                width={consumerWidth}
+                height={consumerHeight}
+                rx="16"
+                fill="#ffffff"
+                stroke={colors.sky}
+                strokeWidth="2"
+                filter="drop-shadow(0 12px 28px rgba(2, 132, 199, 0.16))"
+              />
 
-            {/* Header with Avatar & Online Badge */}
-            <circle cx="36" cy="38" r="18" fill="rgba(2, 132, 199, 0.12)" />
-            <text x="36" y="44" textAnchor="middle" fontSize="18">
-              🏠
-            </text>
+              {/* Header with Avatar & Online Badge */}
+              <circle cx="36" cy="38" r="18" fill="rgba(2, 132, 199, 0.12)" />
+              <text x="36" y="44" textAnchor="middle" fontSize="18">
+                🏠
+              </text>
 
-            <text x="64" y="32" fill={colors.text} fontSize="17" fontWeight="800" fontFamily="Space Grotesk, sans-serif">
-              {username}
-            </text>
-            <text x="64" y="48" fill={colors.green} fontSize="11" fontWeight="700">
-              ● Live Reception Active
-            </text>
+              <text x="64" y="32" fill={colors.text} fontSize="17" fontWeight="800" fontFamily="Space Grotesk, sans-serif">
+                {username}
+              </text>
+              <text x="64" y="48" fill={colors.green} fontSize="11" fontWeight="700">
+                ● Live Reception Active
+              </text>
 
-            {/* Intake Divider */}
-            <line x1="20" y1="62" x2={consumerWidth - 20} y2="62" stroke="#e0f2fe" strokeWidth="1" />
+              {/* Intake Divider */}
+              <line x1="20" y1="62" x2={consumerWidth - 20} y2="62" stroke="#e0f2fe" strokeWidth="1" />
 
-            {/* Live Metrics inside Consumer Node */}
-            <text x="24" y="82" fill={colors.textMuted} fontSize="11" fontWeight="600" textTransform="uppercase">
-              Incoming Clean Power
-            </text>
-            <text x="24" y="104" fill={colors.sky} fontSize="20" fontWeight="800" fontFamily="Space Grotesk, sans-serif">
-              {totalReceived.toFixed(2)} kWh
-            </text>
+              {/* Live Metrics inside Consumer Node */}
+              <text x="24" y="82" fill={colors.textMuted} fontSize="11" fontWeight="600" textTransform="uppercase">
+                Incoming Clean Power
+              </text>
+              <text x="24" y="104" fill={colors.sky} fontSize="20" fontWeight="800" fontFamily="Space Grotesk, sans-serif">
+                {totalReceived.toFixed(2)} kWh
+              </text>
 
-            <text x="24" y="120" fill={colors.textDim} fontSize="10" fontWeight="500">
-              ⚡ Stable 230V · 50Hz Microgrid Load
-            </text>
+              <text x="24" y="120" fill={colors.textDim} fontSize="10" fontWeight="500">
+                ⚡ Stable 230V · 50Hz Microgrid Load
+              </text>
 
-            {/* Intake Reception Port */}
-            <circle
-              cx="0"
-              cy={consumerHeight / 2}
-              r="7"
-              fill={colors.cyan}
-              stroke="#ffffff"
-              strokeWidth="2.5"
-            />
-          </g>
+              {/* Intake Reception Port */}
+              <circle
+                cx="0"
+                cy={consumerHeight / 2}
+                r="7"
+                fill={colors.cyan}
+                stroke="#ffffff"
+                strokeWidth="2.5"
+              />
+            </g>
+          )}
         </svg>
       </div>
 
